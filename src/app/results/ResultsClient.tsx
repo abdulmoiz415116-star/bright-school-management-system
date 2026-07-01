@@ -232,6 +232,10 @@ export function ResultsClient({ students: initialStudents = [] }: { students?: S
       (s.father_name && s.father_name.toLowerCase().includes(query));
 
     return matchSession && matchTerm && matchClass && matchSection && matchQuery;
+  }).sort((a, b) => {
+    const admA = a.admission_number || "";
+    const admB = b.admission_number || "";
+    return admA.localeCompare(admB, undefined, { numeric: true, sensitivity: 'base' });
   });
 
   return (

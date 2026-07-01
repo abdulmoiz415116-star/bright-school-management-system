@@ -537,7 +537,7 @@ export function StudentsClient({ initialStudents }: { initialStudents: Student[]
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {students.map((student) => (
+                      {[...students].sort((a, b) => (a.admission_number || "").localeCompare(b.admission_number || "", undefined, { numeric: true, sensitivity: 'base' })).map((student) => (
                         <TableRow key={student.id} className={`group hover:bg-muted/50 transition-colors ${editingId === student.id ? 'bg-rose-50/50 dark:bg-rose-950/30' : ''}`}>
                           <TableCell className="font-mono font-bold text-xs text-rose-600 dark:text-rose-400 pl-4">
                             {student.admission_number || `#${student.id}`}

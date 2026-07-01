@@ -270,7 +270,11 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (s.admission_number && s.admission_number.toLowerCase().includes(searchQuery.toLowerCase())) ||
     (s.father_name && s.father_name.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  ).sort((a, b) => {
+    const admA = a.admission_number || "";
+    const admB = b.admission_number || "";
+    return admA.localeCompare(admB, undefined, { numeric: true, sensitivity: 'base' });
+  });
 
   return (
     <div className="w-full space-y-8">
