@@ -418,21 +418,21 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
       )}
 
       {/* TOP ACTION BAR */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 dark:bg-pink-950/40 backdrop-blur-xl p-6 rounded-3xl border border-pink-200/80 dark:border-pink-800/30 shadow-lg no-print">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/80 dark:bg-pink-950/40 backdrop-blur-xl p-3.5 rounded-2xl border border-pink-200/80 dark:border-pink-800/30 shadow-md no-print">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-pink-100 flex items-center gap-3">
-            <GraduationCap className="w-8 h-8 text-rose-600 dark:text-rose-400" />
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-pink-100 flex items-center gap-2">
+            <GraduationCap className="w-6 h-6 text-rose-600 dark:text-rose-400" />
             {isUrdu ? 'برائٹ سکول اینڈ مونٹیسوری سسٹم - ایڈمیشن فارم' : 'Bright School & Montessori System'}
           </h1>
-          <p className="text-slate-600 dark:text-pink-200/70 text-sm font-medium mt-1">
+          <p className="text-slate-600 dark:text-pink-200/70 text-xs font-medium mt-0.5">
             {isUrdu ? 'آن لائن داخلہ فارم اور رئیل ٹائم سٹوڈنٹ رجسٹریشن سائیڈ' : 'Official Student Admission Application & Live Registration Portal'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button 
             onClick={handlePrint} 
             variant="outline"
-            className="rounded-xl border-pink-300 dark:border-pink-700 hover:bg-pink-50 dark:hover:bg-pink-900/30 font-bold flex items-center gap-2"
+            className="rounded-xl border-pink-300 dark:border-pink-700 hover:bg-pink-50 dark:hover:bg-pink-900/30 font-bold flex items-center gap-1.5 h-8.5 text-xs"
           >
             <Printer className="w-4 h-4 text-rose-600" />
             {isUrdu ? 'پرنٹ فارم / PDF' : 'Print Form / PDF'}
@@ -504,51 +504,51 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
       )}
 
       {/* MAIN PRO FORM PAPER CONTAINER */}
-      <form onSubmit={handleSubmit} className="print-container bg-white dark:bg-slate-950/80 rounded-2xl border border-pink-200/80 dark:border-pink-900/40 shadow-lg overflow-hidden p-4 sm:p-6 space-y-4 print:p-2 print:space-y-2">
+      <form onSubmit={handleSubmit} className="print-container bg-white dark:bg-slate-950/80 rounded-2xl border border-pink-200/80 dark:border-pink-900/40 shadow-lg overflow-hidden p-3.5 sm:p-4 space-y-3 print:p-2 print:space-y-2">
         
         {/* OFFICIAL SCHOOL HEADER (Visible on screen and Print) */}
-        <div className="border-b-2 border-slate-900 dark:border-pink-800/60 pb-3 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
-          <div className="flex flex-col md:flex-row items-center gap-3">
+        <div className="border-b-2 border-slate-900 dark:border-pink-800/60 pb-2 flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left">
+          <div className="flex flex-col md:flex-row items-center gap-2.5">
             <img 
               src="/school_logo.png" 
               alt="Bright School Official Crest" 
-              className="w-14 h-14 object-contain shrink-0 drop-shadow-md print:w-11 print:h-11"
+              className="w-12 h-12 object-contain shrink-0 drop-shadow-md print:w-11 print:h-11"
             />
             <div>
-              <h2 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white uppercase print:text-sm">
+              <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white uppercase print:text-sm">
                 {isUrdu ? 'برائٹ سکول اینڈ مونٹیسوری سسٹم' : 'Bright School & Montessori System'}
               </h2>
-              <p className="text-rose-600 dark:text-rose-400 font-bold text-xs mt-0.5 print:text-[9px]">
+              <p className="text-rose-600 dark:text-rose-400 font-bold text-[10px] mt-0.5 print:text-[9px]">
                 {isUrdu ? 'تعلیم اور کردار سازی کا اعلیٰ مرکز - Nurturing Young Minds' : 'Nurturing Young Minds for a Brighter Future'}
               </p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold print:text-[8px]">
+              <p className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold print:text-[8px]">
                 Regd No: BS-EDU-9042 | Main Campus | Ph: 0300-1234567
               </p>
             </div>
           </div>
-          <div className="flex flex-row md:flex-col items-center md:items-end gap-2 bg-pink-50 dark:bg-pink-950/60 p-2 px-3 rounded-xl border border-pink-200/60 dark:border-pink-800/40 shrink-0 text-center md:text-right print:p-1">
-            <span className="text-[10px] font-black uppercase text-rose-700 dark:text-rose-400 tracking-wider print:text-[8px]">
+          <div className="flex flex-row md:flex-col items-center md:items-end gap-1.5 bg-pink-50 dark:bg-pink-950/60 p-1.5 px-2.5 rounded-xl border border-pink-200/60 dark:border-pink-800/40 shrink-0 text-center md:text-right print:p-1">
+            <span className="text-[9px] font-black uppercase text-rose-700 dark:text-rose-400 tracking-wider print:text-[8px]">
               {isUrdu ? 'ایڈمیشن فارم سیشن' : 'Session 2026-2027'}
             </span>
-            <span className="text-xs font-black text-slate-900 dark:text-white font-mono bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-pink-200/80 dark:border-pink-800/50 shadow-sm print:text-[9px] print:py-0">
+            <span className="text-[10px] sm:text-xs font-black text-slate-900 dark:text-white font-mono bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-pink-200/80 dark:border-pink-800/50 shadow-sm print:text-[9px] print:py-0">
               Form No: {formNo}
             </span>
-            <span className="text-[9px] font-semibold text-slate-500 print:text-[8px]">
+            <span className="text-[8px] font-semibold text-slate-500 print:text-[8px]">
               Date: {new Date().toLocaleDateString()}
             </span>
           </div>
         </div>
 
         {/* PHOTO & CLASS SELECTION BLOCK */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-start">
           
-          <div className="md:col-span-4 space-y-4 print:col-span-4">
-            <div className="bg-slate-50 dark:bg-slate-900/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3 print:p-2 print:space-y-1.5">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-pink-100 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1.5 print:text-xs">
+          <div className="md:col-span-4 space-y-3 print:col-span-4">
+            <div className="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 print:p-2 print:space-y-1.5">
+              <h3 className="text-xs font-bold text-slate-900 dark:text-pink-100 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1 print:text-xs">
                 <Sparkles className="w-4 h-4 text-amber-500" />
                 {isUrdu ? '1۔ مطلوبہ کلاس کا انتخاب (Admission Sought For)' : '1. Admission Sought For'}
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 print:grid-cols-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 print:grid-cols-3">
                 <div>
                   <Label htmlFor="class_applying" className="font-bold text-[10px] uppercase text-slate-700 dark:text-slate-300 print:text-[8px]">
                     {isUrdu ? 'کلاس / گریڈ *' : 'Class / Grade *'}
@@ -643,12 +643,12 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
         </div>
 
         {/* SECTION 2: CANDIDATE PERSONAL DETAILS */}
-        <div className="space-y-3 print:space-y-1">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-pink-100 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1.5 print:text-xs">
+        <div className="space-y-2 print:space-y-1">
+          <h3 className="text-xs font-bold text-slate-900 dark:text-pink-100 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1 print:text-xs">
             <User className="w-4 h-4 text-rose-600 dark:text-rose-400" />
             {isUrdu ? '2۔ طالب علم کی ذاتی معلومات (Candidate Personal Details)' : '2. Candidate Personal Details'}
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 print:grid-cols-4 print:gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 print:grid-cols-4 print:gap-2">
             <div>
               <Label htmlFor="student_name" className="font-bold text-[10px] uppercase text-slate-700 dark:text-slate-300 print:text-[8px]">
                 {isUrdu ? 'طالب علم کا مکمل نام *' : 'Full Name of Candidate *'}
@@ -741,12 +741,12 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
         </div>
 
         {/* SECTION 3: PARENTS DETAILS */}
-        <div className="space-y-3 print:space-y-1">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-pink-100 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1.5 print:text-xs">
+        <div className="space-y-2 print:space-y-1">
+          <h3 className="text-xs font-bold text-slate-900 dark:text-pink-100 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1 print:text-xs">
             <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             {isUrdu ? '3۔ والدین کی معلومات (Father & Mother Particulars)' : '3. Parents Particulars'}
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 print:grid-cols-4 print:gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 print:grid-cols-4 print:gap-2">
             <div>
               <Label htmlFor="father_name" className="font-bold text-[10px] uppercase text-slate-700 dark:text-slate-300 print:text-[8px]">
                 {isUrdu ? 'والد کا نام *' : "Father's Full Name *"}
@@ -831,12 +831,12 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
         </div>
 
         {/* SECTION 4: ADDRESS & EMERGENCY */}
-        <div className="space-y-3 print:space-y-1">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-pink-100 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1.5 print:text-xs">
+        <div className="space-y-2 print:space-y-1">
+          <h3 className="text-xs font-bold text-slate-900 dark:text-pink-100 flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-1 print:text-xs">
             <MapPin className="w-4 h-4 text-rose-500" />
             {isUrdu ? '4۔ پتہ اور ہنگامی رابطہ (Address & Emergency Contact)' : '4. Residence & Emergency Contact'}
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 print:grid-cols-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 print:grid-cols-4">
             <div className="md:col-span-3 print:col-span-3">
               <Label htmlFor="address" className="font-bold text-[10px] uppercase text-slate-700 dark:text-slate-300 print:text-[8px]">
                 {isUrdu ? 'موجودہ رہائشی پتہ (Home Address)' : 'Current Home Address'}
@@ -867,8 +867,8 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
         </div>
 
         {/* SECTION 5: CHECKLIST & UNDERTAKING */}
-        <div className="space-y-3 bg-pink-50/50 dark:bg-pink-950/20 p-3 rounded-xl border border-pink-200/60 dark:border-pink-800/40 print:p-2 print:space-y-1">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-pink-100 flex items-center gap-1.5 border-b border-pink-200 dark:border-pink-900/60 pb-1.5 print:text-xs">
+        <div className="space-y-2 bg-pink-50/50 dark:bg-pink-950/20 p-2.5 rounded-xl border border-pink-200/60 dark:border-pink-800/40 print:p-2 print:space-y-1">
+          <h3 className="text-xs font-bold text-slate-900 dark:text-pink-100 flex items-center gap-1.5 border-b border-pink-200 dark:border-pink-900/60 pb-1 print:text-xs">
             <FileCheck2 className="w-4 h-4 text-amber-600" />
             {isUrdu ? '5۔ ضروری دستاویزات اور اقرار نامہ (Documents & Undertaking)' : '5. Required Documents & Undertaking'}
           </h3>
@@ -912,13 +912,13 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
         </div>
 
         {/* REAL-TIME INTERACTIVE DIGITAL SIGNATURES & APPROVAL SECTION */}
-        <div className="space-y-4 pt-3 border-t-2 border-slate-200 dark:border-slate-800 print:space-y-1">
+        <div className="space-y-3 pt-2.5 border-t-2 border-slate-200 dark:border-slate-800 print:space-y-1">
           <div className="flex items-center justify-between no-print">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <Stamp className="w-4 h-4 text-rose-600" />
               {isUrdu ? 'ڈیجیٹل دستخط اور منظوریاں (Digital Signatures & Approvals)' : 'Digital Signatures & Approvals'}
             </h3>
-            <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-900">
+            <span className="text-[9px] font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-900">
               {isUrdu ? 'رئیل ٹائم لائو سنک' : 'Real-time Live Sync'}
             </span>
           </div>
@@ -1025,20 +1025,20 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
         </div>
 
         {/* SUBMIT BUTTON */}
-        <div className="pt-4 flex justify-end gap-4 no-print">
+        <div className="pt-2 flex justify-end gap-3 no-print">
           <Button
             type="submit"
             disabled={loading}
-            className="h-14 px-10 rounded-2xl bg-gradient-to-r from-amber-500 via-rose-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-black text-base shadow-xl shadow-rose-500/25 hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-3"
+            className="h-10 px-8 rounded-xl bg-gradient-to-r from-amber-500 via-rose-600 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md hover:scale-[1.01] active:scale-95 transition-all flex items-center gap-2"
           >
             {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span className="flex items-center gap-1.5">
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 {isUrdu ? 'جمع ہو رہا ہے...' : 'Submitting...'}
               </span>
             ) : (
               <>
-                <Save className="w-5 h-5" />
+                <Save className="w-4 h-4" />
                 {isUrdu ? 'داخلہ فارم جمع کریں (Submit Admission)' : 'Submit Admission Application'}
               </>
             )}
