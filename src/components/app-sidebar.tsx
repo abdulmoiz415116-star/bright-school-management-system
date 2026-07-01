@@ -35,6 +35,7 @@ const getAdminItems = (t: any, isUrdu: boolean) => [
   { title: t("admission"), url: "/admission", icon: GraduationCap },
   { title: isUrdu ? "رزلٹ کارڈز" : "Result Cards", url: "/results", icon: Award },
   { title: t("academics"), url: "/academics", icon: Library },
+  { title: isUrdu ? "کلاسز ریکارڈز (Classes)" : "Classes Details", url: "/classes", icon: Building },
   { title: isUrdu ? "بیچ پروموشن" : "Batch Promotion", url: "/academics/promotion", icon: GraduationCap },
   { title: t("timetable"), url: "/timetable", icon: Calendar },
   { title: t("attendance"), url: "/attendance", icon: CalendarCheck },
