@@ -298,10 +298,12 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
             width: 100% !important;
             max-width: 100% !important;
             margin: 0 !important;
-            padding: 0.1in !important;
+            padding: 0.05in !important;
             box-shadow: none !important;
             border: none !important;
             background: white !important;
+            transform: scale(0.86);
+            transform-origin: top center;
           }
           .print-container * {
             font-size: 9px !important;
@@ -648,7 +650,7 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
             <User className="w-4 h-4 text-rose-600 dark:text-rose-400" />
             {isUrdu ? '2۔ طالب علم کی ذاتی معلومات (Candidate Personal Details)' : '2. Candidate Personal Details'}
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 print:grid-cols-4 print:gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 print:grid-cols-6 print:gap-1.5">
             <div>
               <Label htmlFor="student_name" className="font-bold text-[10px] uppercase text-slate-700 dark:text-slate-300 print:text-[8px]">
                 {isUrdu ? 'طالب علم کا مکمل نام *' : 'Full Name of Candidate *'}
@@ -746,7 +748,7 @@ export function AdmissionClient({ initialStudents = [] }: { initialStudents?: St
             <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             {isUrdu ? '3۔ والدین کی معلومات (Father & Mother Particulars)' : '3. Parents Particulars'}
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 print:grid-cols-4 print:gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 print:grid-cols-6 print:gap-1.5">
             <div>
               <Label htmlFor="father_name" className="font-bold text-[10px] uppercase text-slate-700 dark:text-slate-300 print:text-[8px]">
                 {isUrdu ? 'والد کا نام *' : "Father's Full Name *"}
