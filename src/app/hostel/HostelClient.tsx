@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Building, Plus, Loader2, Trash2, Home } from "lucide-react";
+import { Building, Plus, Loader2, Trash2, Home, Wifi, WifiOff } from "lucide-react";
 
 type Hostel = {
   id: string;
@@ -21,31 +21,77 @@ type Hostel = {
   warden_phone: string;
 };
 
+const DEMO_HOSTELS: Hostel[] = [
+  { id: "demo-1", name: "Jinnah Hall (Boys)", type: "Boys", warden_name: "Tariq Jamil", warden_phone: "0300-1234567" },
+  { id: "demo-2", name: "Iqbal House (Boys)", type: "Boys", warden_name: "Dr. Sajid Khan", warden_phone: "0321-7654321" },
+  { id: "demo-3", name: "Fatima Jinnah Hall (Girls)", type: "Girls", warden_name: "Mrs. Nasreen Begum", warden_phone: "0333-9876543" }
+];
+
 export function HostelClient({ initialHostels }: { initialHostels: Hostel[] }) {
-  const [hostels, setHostels] = useState<Hostel[]>(initialHostels);
+  const [hostels, setHostels] = useState<Hostel[]>([]);
+  const [isOffline, setIsOffline] = useState(false);
   const [name, setName] = useState("");
   const [type, setType] = useState("Boys");
   const [wardenName, setWardenName] = useState("");
   const [wardenPhone, setWardenPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   
   const supabase = createClient();
 
   useEffect(() => {
+    setIsMounted(true);
+    
+    // Check if initialHostels failed or is empty
+    const localData = localStorage.getItem("hostels_data");
+    
+    if (localData) {
+      setHostels(JSON.parse(localData));
+      // If we got no database records but have local, we might be offline or database table is missing
+      if (!initialHostels || initialHostels.length === 0) {
+        setIsOffline(true);
+      }
+    } else {
+      if (initialHostels && initialHostels.length > 0) {
+        setHostels(initialHostels);
+        localStorage.setItem("hostels_data", JSON.stringify(initialHostels));
+      } else {
+        // Fallback to Demo data
+        setHostels(DEMO_HOSTELS);
+        localStorage.setItem("hostels_data", JSON.stringify(DEMO_HOSTELS));
+        setIsOffline(true);
+      }
+    }
+  }, [initialHostels]);
+
+  useEffect(() => {
+    // Attempt real-time postgres changes subscription
     const channel = supabase
       .channel('hostels_sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'hostels' }, (payload) => {
         if (payload.eventType === 'INSERT') {
           setHostels((prev) => {
             if (prev.find(h => h.id === payload.new.id)) return prev;
-            return [...prev, payload.new as Hostel];
+            const updated = [...prev, payload.new as Hostel];
+            localStorage.setItem("hostels_data", JSON.stringify(updated));
+            return updated;
           });
+          setIsOffline(false);
         }
         if (payload.eventType === 'DELETE') {
-          setHostels((prev) => prev.filter(h => h.id !== payload.old.id));
+          setHostels((prev) => {
+            const updated = prev.filter(h => h.id !== payload.old.id);
+            localStorage.setItem("hostels_data", JSON.stringify(updated));
+            return updated;
+          });
+          setIsOffline(false);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setIsOffline(true);
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -57,37 +103,64 @@ export function HostelClient({ initialHostels }: { initialHostels: Hostel[] }) {
     if (!name.trim() || !type) return;
     
     setLoading(true);
-
-    const payload = { 
+    const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9);
+    
+    const newHostel: Hostel = { 
+      id: newId,
       name: name.trim(),
       type,
       warden_name: wardenName.trim(),
       warden_phone: wardenPhone.trim()
     };
 
-    const { error } = await supabase.from('hostels').insert([payload]);
-    
-    if (error) {
-      alert("Error adding hostel: " + error.message);
-    } else {
-      setName("");
-      setType("Boys");
-      setWardenName("");
-      setWardenPhone("");
+    // Always update local state first for instant UI response (real-time feel)
+    setHostels((prev) => {
+      const updated = [...prev, newHostel];
+      localStorage.setItem("hostels_data", JSON.stringify(updated));
+      return updated;
+    });
+
+    try {
+      const { error } = await supabase.from('hostels').insert([newHostel]);
+      if (error) {
+        console.warn("Could not insert to remote Supabase (falling back to Local Cache):", error.message);
+        setIsOffline(true);
+      } else {
+        setIsOffline(false);
+      }
+    } catch (err) {
+      console.warn("Network error inserting to Supabase:", err);
+      setIsOffline(true);
     }
+    
+    setName("");
+    setType("Boys");
+    setWardenName("");
+    setWardenPhone("");
     setLoading(false);
   };
 
   const handleDeleteHostel = async (id: string) => {
     if (!confirm("Are you sure you want to delete this hostel?")) return;
     
-    const previous = [...hostels];
-    setHostels(hostels.filter(h => h.id !== id));
+    // Always update local state immediately
+    setHostels((prev) => {
+      const updated = prev.filter(h => h.id !== id);
+      localStorage.setItem("hostels_data", JSON.stringify(updated));
+      return updated;
+    });
 
-    const { error } = await supabase.from('hostels').delete().eq('id', id);
-    if (error) {
-      setHostels(previous);
-      alert("Error deleting hostel: " + error.message);
+    try {
+      const { error } = await supabase.from('hostels').delete().eq('id', id);
+      if (error) {
+        console.warn("Could not delete from remote Supabase (removed from Local Cache):", error.message);
+        setIsOffline(true);
+      } else {
+        setIsOffline(false);
+      }
+    } catch (err) {
+      console.warn("Network error deleting from Supabase:", err);
+      setIsOffline(true);
     }
   };
 
@@ -118,6 +191,21 @@ export function HostelClient({ initialHostels }: { initialHostels: Hostel[] }) {
             </h1>
             <p className="text-muted-foreground mt-1">Manage hostels, rooms, and allocations.</p>
           </div>
+          {isMounted && (
+            <div className="flex items-center gap-2 shrink-0">
+              {isOffline ? (
+                <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 gap-1.5 py-1 px-3 font-semibold text-xs rounded-full">
+                  <WifiOff className="w-3.5 h-3.5 animate-pulse" />
+                  Local Offline Cache (Demo Mode)
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 gap-1.5 py-1 px-3 font-semibold text-xs rounded-full">
+                  <Wifi className="w-3.5 h-3.5" />
+                  Cloud Database Synced (Real-Time)
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">

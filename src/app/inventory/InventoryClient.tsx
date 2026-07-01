@@ -74,18 +74,21 @@ const DEFAULT_SUPPLIERS: Supplier[] = [
 
 const DEFAULT_LOGS: InventoryLog[] = [
   // Item 101: Pens
-  { id: 501, item_id: 101, item_name: "Pens (بال پین)", transaction_type: "IN", quantity: 150, remarks: "Initial Stock Import", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 10).toISOString(), payment_mode: "Cash Purchase", price_per_unit: 15, total_amount: 2250, payment_source: "Cash in Hand" },
-  { id: 502, item_id: 101, item_name: "Pens (بال پین)", transaction_type: "OUT", quantity: 20, remarks: "Issued to Primary Block", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 8).toISOString(), payment_mode: "Internal Issue", price_per_unit: 0, total_amount: 0, payment_source: "Internal" },
-  { id: 503, item_id: 101, item_name: "Pens (بال پین)", transaction_type: "OUT", quantity: 15, remarks: "Issued to High Section", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 6).toISOString(), payment_mode: "Internal Issue", price_per_unit: 0, total_amount: 0, payment_source: "Internal" },
-  { id: 504, item_id: 101, item_name: "Pens (بال پین)", transaction_type: "IN", quantity: 30, remarks: "Restock from supplier", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 4).toISOString(), payment_mode: "Credit Purchase", price_per_unit: 15, total_amount: 450, payment_source: "Al-Karam Stationers (الکرم اسٹیشنرز)" },
-  { id: 505, item_id: 101, item_name: "Pens (بال پین)", transaction_type: "OUT", quantity: 25, remarks: "Sold to students", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 2).toISOString(), payment_mode: "Cash Sale", price_per_unit: 20, total_amount: 500, payment_source: "Cash in Hand" },
+  { id: 501, item_id: 101, item_name: "Pens (بال پین)", transaction_type: "IN", quantity: 150, remarks: "Stock purchased from distributor", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 10).toISOString(), payment_mode: "Cash Purchase", price_per_unit: 15, total_amount: 2250, payment_source: "Cash in Hand" },
+  { id: 502, item_id: 101, item_name: "Pens (بال پین)", transaction_type: "OUT", quantity: 20, remarks: "Internal issue to Staff Room", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 8).toISOString(), payment_mode: "Internal Issue", price_per_unit: 0, total_amount: 0, payment_source: "Internal" },
+  { id: 504, item_id: 101, item_name: "Pens (بال پین)", transaction_type: "IN", quantity: 30, remarks: "Purchased extra stock on credit", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 4).toISOString(), payment_mode: "Credit Purchase", price_per_unit: 15, total_amount: 450, payment_source: "Al-Karam Stationers (الکرم اسٹیشنرز)" },
+  { id: 505, item_id: 101, item_name: "Pens (بال پین)", transaction_type: "OUT", quantity: 25, remarks: "Cash Sale to students", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 2).toISOString(), payment_mode: "Cash Sale", price_per_unit: 20, total_amount: 500, payment_source: "Cash in Hand" },
 
   // Item 102: Pencils
-  { id: 506, item_id: 102, item_name: "Pencils (پنسل)", transaction_type: "IN", quantity: 300, remarks: "Store Opening Stock", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 10).toISOString(), payment_mode: "Cash Purchase", price_per_unit: 8, total_amount: 2400, payment_source: "Bank" },
-  { id: 507, item_id: 102, item_name: "Pencils (پنسل)", transaction_type: "OUT", quantity: 50, remarks: "Issued to Playgroup Block", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 7).toISOString(), payment_mode: "Internal Issue", price_per_unit: 0, total_amount: 0, payment_source: "Internal" },
-  { id: 508, item_id: 102, item_name: "Pencils (پنسل)", transaction_type: "OUT", quantity: 30, remarks: "Sold to student bookshop", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 5).toISOString(), payment_mode: "Cash Sale", price_per_unit: 10, total_amount: 300, payment_source: "Cash in Hand" },
-  { id: 509, item_id: 102, item_name: "Pencils (پنسل)", transaction_type: "IN", quantity: 60, remarks: "Restocked from vendor", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 3).toISOString(), payment_mode: "Credit Purchase", price_per_unit: 8, total_amount: 480, payment_source: "Al-Karam Stationers (الکرم اسٹیشنرز)" },
-  { id: 510, item_id: 102, item_name: "Pencils (پنسل)", transaction_type: "OUT", quantity: 30, remarks: "Sold on credit to staff", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 1).toISOString(), payment_mode: "Credit Sale", price_per_unit: 10, total_amount: 300, payment_source: "Staff Credit Ledger" }
+  { id: 506, item_id: 102, item_name: "Pencils (پنسل)", transaction_type: "IN", quantity: 300, remarks: "Opening stock purchase", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 10).toISOString(), payment_mode: "Cash Purchase", price_per_unit: 8, total_amount: 2400, payment_source: "Bank" },
+  { id: 507, item_id: 102, item_name: "Pencils (پنسل)", transaction_type: "OUT", quantity: 50, remarks: "Free Distribution in Playgroup Block", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 7).toISOString(), payment_mode: "Internal Issue", price_per_unit: 0, total_amount: 0, payment_source: "Internal" },
+  { id: 508, item_id: 102, item_name: "Pencils (پنسل)", transaction_type: "OUT", quantity: 30, remarks: "Cash Sale to student bookshop", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 5).toISOString(), payment_mode: "Cash Sale", price_per_unit: 10, total_amount: 300, payment_source: "Cash in Hand" },
+  { id: 509, item_id: 102, item_name: "Pencils (پنسل)", transaction_type: "IN", quantity: 60, remarks: "Credit Purchase from vendor", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 3).toISOString(), payment_mode: "Credit Purchase", price_per_unit: 8, total_amount: 480, payment_source: "Al-Karam Stationers (الکرم اسٹیشنرز)" },
+  { id: 510, item_id: 102, item_name: "Pencils (پنسل)", transaction_type: "OUT", quantity: 30, remarks: "Credit Sale to Class 5 students", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 1).toISOString(), payment_mode: "Credit Sale", price_per_unit: 10, total_amount: 300, payment_source: "Ali Raza (Parent)" },
+
+  // Extra Pro Level Sale & Purchase Data (Uniforms & Bags)
+  { id: 511, item_id: 110, item_name: "Official Footballs (فٹ بال)", transaction_type: "IN", quantity: 20, remarks: "Bulk Purchase of Sports Gear", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 12).toISOString(), payment_mode: "Credit Purchase", price_per_unit: 600, total_amount: 12000, payment_source: "Apex Sports Traders (ایپیکس اسپورٹس)" },
+  { id: 512, item_id: 110, item_name: "Official Footballs (فٹ بال)", transaction_type: "OUT", quantity: 5, remarks: "Cash Sale for Summer Camp tournament", handled_by: "Admin", date: new Date(Date.now() - 86400000 * 5).toISOString(), payment_mode: "Cash Sale", price_per_unit: 800, total_amount: 4000, payment_source: "Cash in Hand" }
 ];
 
 export function InventoryClient({ initialItems, initialLogs }: { initialItems: InventoryItem[], initialLogs: InventoryLog[] }) {
@@ -143,7 +146,7 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
   });
 
   // Active view tabs
-  const [activeTab, setActiveTab] = useState<'stock' | 'ledger' | 'suppliers'>('stock');
+  const [activeTab, setActiveTab] = useState<'stock' | 'suppliers'>('stock');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Edit / Form states
@@ -360,8 +363,8 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
       transaction_type: type,
       quantity: diff,
       remarks: type === 'IN' 
-        ? (isUrdu ? "فوری اسٹاک ان (+1)" : "Quick stock IN (+1)")
-        : (isUrdu ? "فوری اسٹاک آؤٹ (-1)" : "Quick stock OUT (-1)"),
+        ? (isUrdu ? "فوری خریداری (+1)" : "Quick Purchase (+1)")
+        : (isUrdu ? "فوری فروخت (-1)" : "Quick Sale (-1)"),
       handled_by: "Admin",
       date: new Date().toISOString(),
       payment_mode: type === 'IN' ? "Cash Purchase" : "Internal Issue",
@@ -760,8 +763,8 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                 <Package className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase">{isUrdu ? "کل اسٹاک مالیت (Store Assets)" : "Store Assets Value"}</p>
-                <h3 className="text-2xl font-black text-foreground">Rs. {totalStockValue.toLocaleString()}</h3>
+                <p className="text-xs font-bold text-muted-foreground uppercase print:text-slate-700">{isUrdu ? "کل اسٹاک مالیت (Store Assets)" : "Store Assets Value"}</p>
+                <h3 className="text-2xl font-black text-foreground print:text-slate-950">Rs. {totalStockValue.toLocaleString()}</h3>
               </div>
             </CardContent>
           </Card>
@@ -772,8 +775,8 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                 <Wallet className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase">{isUrdu ? "کیش ان ہینڈ (Cash in Hand)" : "Cash in Hand"}</p>
-                <h3 className="text-2xl font-black text-emerald-600">Rs. {cashInHand.toLocaleString()}</h3>
+                <p className="text-xs font-bold text-muted-foreground uppercase print:text-slate-700">{isUrdu ? "کیش ان ہینڈ (Cash in Hand)" : "Cash in Hand"}</p>
+                <h3 className="text-2xl font-black text-emerald-600 print:text-emerald-800">Rs. {cashInHand.toLocaleString()}</h3>
               </div>
             </CardContent>
           </Card>
@@ -784,8 +787,8 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                 <Landmark className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase">{isUrdu ? "بینک اکاؤنٹ بیلنس (Bank)" : "Bank Balance"}</p>
-                <h3 className="text-2xl font-black text-blue-600">Rs. {bankBalance.toLocaleString()}</h3>
+                <p className="text-xs font-bold text-muted-foreground uppercase print:text-slate-700">{isUrdu ? "بینک اکاؤنٹ بیلنس (Bank)" : "Bank Balance"}</p>
+                <h3 className="text-2xl font-black text-blue-600 print:text-blue-800">Rs. {bankBalance.toLocaleString()}</h3>
               </div>
             </CardContent>
           </Card>
@@ -796,8 +799,8 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs font-bold text-muted-foreground uppercase">{isUrdu ? "سپلائر ادھار پے بلز (Payables)" : "Supplier Payables"}</p>
-                <h3 className={`text-2xl font-black ${totalPayableOutstanding > 0 ? 'text-amber-600' : 'text-slate-500'}`}>
+                <p className="text-xs font-bold text-muted-foreground uppercase print:text-slate-700">{isUrdu ? "سپلائر ادھار پے بلز (Payables)" : "Supplier Payables"}</p>
+                <h3 className={`text-2xl font-black ${totalPayableOutstanding > 0 ? 'text-amber-600 print:text-amber-800' : 'text-slate-500 print:text-slate-700'}`}>
                   Rs. {totalPayableOutstanding.toLocaleString()}
                 </h3>
               </div>
@@ -805,7 +808,7 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
           </Card>
         </div>
 
-        {/* NAVIGATION TABS BETWEEN STOCK, LEDGER AND SUPPLIERS */}
+        {/* NAVIGATION TABS BETWEEN STOCK AND SUPPLIERS */}
         <div className="flex space-x-2 bg-muted p-1.5 rounded-2xl w-fit border border-border/50 print:hidden">
           <button
             onClick={() => setActiveTab('stock')}
@@ -814,14 +817,6 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
             }`}
           >
             {isUrdu ? "انونٹری اور اسٹاک (Stock)" : "Store Room Stock"}
-          </button>
-          <button
-            onClick={() => setActiveTab('ledger')}
-            className={`px-6 py-2.5 text-sm font-bold rounded-xl transition-all ${
-              activeTab === 'ledger' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {isUrdu ? "جنرل لیجر کھاتہ (Ledger)" : "General Ledger Book"}
           </button>
           <button
             onClick={() => setActiveTab('suppliers')}
@@ -922,7 +917,7 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                 <CardHeader className="bg-muted/40 border-b border-border p-6">
                   <CardTitle className="text-base font-black flex items-center gap-2">
                     <ArrowUpRight className="w-4 h-4 text-indigo-600" />
-                    {isUrdu ? 'اسٹاک ٹرانزیکشن کھاتہ (آمد و رفت)' : 'Stock IN / OUT Transaction'}
+                    {isUrdu ? 'خریداری اور فروخت کا ریکارڈ (Purchase & Sale Book)' : 'Purchase & Sale Ledger Entry'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -938,13 +933,13 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="font-bold text-xs uppercase text-muted-foreground">{isUrdu ? 'ٹرانزیکشن کی قسم' : 'Transaction Type'}</Label>
+                        <Label className="font-bold text-xs uppercase text-muted-foreground">{isUrdu ? 'ریکارڈ کی قسم (Entry Type) *' : 'Entry Type *'}</Label>
                         <div className="flex gap-2">
                           <Button type="button" variant={transactionType === 'IN' ? 'default' : 'outline'} className={`flex-1 h-10 rounded-xl font-bold ${transactionType === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''}`} onClick={() => setTransactionType('IN')}>
-                            <ArrowDownRight className="mr-1.5 h-4 w-4" /> {isUrdu ? 'خریداری / آمد (IN)' : 'Restock IN'}
+                            <ArrowDownRight className="mr-1.5 h-4 w-4" /> {isUrdu ? 'خریداری (Purchase / Buy)' : 'Purchase (Buy)'}
                           </Button>
                           <Button type="button" variant={transactionType === 'OUT' ? 'default' : 'outline'} className={`flex-1 h-10 rounded-xl font-bold ${transactionType === 'OUT' ? 'bg-rose-600 hover:bg-rose-700 text-white' : ''}`} onClick={() => setTransactionType('OUT')}>
-                            <ArrowUpRight className="mr-1.5 h-4 w-4" /> {isUrdu ? 'فروخت / اخراج (OUT)' : 'Issue OUT'}
+                            <ArrowUpRight className="mr-1.5 h-4 w-4" /> {isUrdu ? 'فروخت (Sale / Issue)' : 'Sale (Sell)'}
                           </Button>
                         </div>
                       </div>
@@ -1047,7 +1042,7 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                       <Input placeholder={isUrdu ? 'تفصیل لکھیں...' : 'Remarks/Reason'} value={remarks} onChange={e => setRemarks(e.target.value)} className="rounded-xl h-10" />
                     </div>
                     <Button type="submit" className="w-full h-11 rounded-xl bg-slate-900 dark:bg-slate-100 dark:text-slate-900 font-bold hover:opacity-90 transition mt-2" disabled={transLoading || !selectedItemId || !transQuantity}>
-                      {transLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isUrdu ? 'ٹرانزیکشن اور کھاتہ ریکارڈ کریں' : 'Log Transaction & Adjust Balances')}
+                      {transLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isUrdu ? 'خریداری / فروخت کا اندراج کریں' : 'Post Purchase / Sale Entry')}
                     </Button>
                   </form>
                 </CardContent>
@@ -1160,8 +1155,11 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                                   Safe Stock
                                 </Badge>
                               )}
-                              <p className="text-[9px] text-muted-foreground font-semibold mt-1">
+                              <p className="text-[10px] text-slate-700 dark:text-slate-300 font-bold mt-1 print:text-slate-900 print:text-xs">
                                 {isUrdu ? `خرید: Rs. ${item.purchase_price} | فروخت: Rs. ${item.sale_price}` : `Cost: Rs. ${item.purchase_price} | Sale: Rs. ${item.sale_price}`}
+                              </p>
+                              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5 print:text-emerald-800 print:text-xs">
+                                {isUrdu ? `کل مالیت: Rs. ${Number(item.quantity * item.purchase_price).toLocaleString()}` : `Total Value: Rs. ${Number(item.quantity * item.purchase_price).toLocaleString()}`}
                               </p>
                               {item.purchase_price > 0 && item.sale_price > item.purchase_price && (
                                 <div className="text-right">
@@ -1198,17 +1196,17 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                                 variant="ghost" 
                                 className="h-8 w-8 rounded-lg text-rose-500 hover:bg-rose-50"
                                 onClick={() => handleQuickAdjust(item.id, 'OUT')}
-                                title="Stock OUT (-1)"
+                                title={isUrdu ? "فروخت کریں (-1)" : "Sell (-1)"}
                               >
                                 <Minus className="w-4 h-4" />
                               </Button>
-                              <span className="text-xs font-black text-foreground px-2">{isUrdu ? "ایڈجسٹ" : "Adjust"}</span>
+                              <span className="text-xs font-black text-foreground px-2">{isUrdu ? "فوری ایکشن" : "Quick Adjust"}</span>
                               <Button 
                                 size="icon" 
                                 variant="ghost" 
                                 className="h-8 w-8 rounded-lg text-emerald-600 hover:bg-emerald-50"
                                 onClick={() => handleQuickAdjust(item.id, 'IN')}
-                                title="Stock IN (+1)"
+                                title={isUrdu ? "خریداری کریں (+1)" : "Purchase (+1)"}
                               >
                                 <Plus className="w-4 h-4" />
                               </Button>
@@ -1295,16 +1293,19 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                           <TableRow key={item.id} className="hover:bg-muted/20 transition-colors">
                             <TableCell className="font-bold pl-6 text-foreground">{item.name}</TableCell>
                             <TableCell><Badge variant="outline" className="rounded-lg font-semibold">{item.category}</Badge></TableCell>
-                            <TableCell className="text-muted-foreground text-xs font-semibold">{item.location || '-'}</TableCell>
-                            <TableCell className="font-bold text-xs">Rs. {item.purchase_price} / Rs. {item.sale_price}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs font-semibold print:text-slate-800">{item.location || '-'}</TableCell>
+                            <TableCell className="font-bold text-xs print:text-slate-900">Rs. {item.purchase_price} / Rs. {item.sale_price}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <span className={`font-black text-base ${isLow ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                <span className={`font-black text-base print:text-slate-950 ${isLow ? 'text-amber-600' : 'text-emerald-600'}`}>
                                   {item.quantity}
                                 </span>
-                                <span className="text-xs text-muted-foreground">{item.unit}</span>
-                                {isLow && <Badge variant="destructive" className="text-[10px] py-0">Low</Badge>}
+                                <span className="text-xs text-muted-foreground print:text-slate-850">{item.unit}</span>
+                                {isLow && <Badge variant="destructive" className="text-[10px] py-0 print:border print:border-red-650">Low</Badge>}
                               </div>
+                            </TableCell>
+                            <TableCell className="font-black text-xs text-emerald-600 dark:text-emerald-400 print:text-emerald-800">
+                              Rs. {Number(item.quantity * item.purchase_price).toLocaleString()}
                             </TableCell>
                             <TableCell className="text-right pr-6 print:hidden">
                               <div className="flex items-center justify-end gap-1">
@@ -1324,169 +1325,6 @@ export function InventoryClient({ initialItems, initialLogs }: { initialItems: I
                 </CardContent>
               </Card>
             )}
-          </div>
-        )}
-
-        {/* TAB 2: FINANCIAL LEDGER BOOK */}
-        {activeTab === 'ledger' && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Profit & Loss metrics cards */}
-            <div className="grid gap-4 md:grid-cols-3 print:hidden">
-              <Card className="bg-card border-border">
-                <CardContent className="p-4 flex justify-between items-center">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-bold uppercase">{isUrdu ? "فروخت سے کل آمدنی (Revenue)" : "Sales Revenue"}</p>
-                    <h4 className="text-lg font-black text-slate-900 dark:text-slate-100">Rs. {totalSalesRevenue.toLocaleString()}</h4>
-                  </div>
-                  <Badge className="bg-blue-500/10 text-blue-600 rounded-lg py-1 px-2 font-bold text-[10px]">Income</Badge>
-                </CardContent>
-              </Card>
-              <Card className="bg-card border-border">
-                <CardContent className="p-4 flex justify-between items-center">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-bold uppercase">{isUrdu ? "فروخت شدہ مال کی لاگت (COGS)" : "Cost of Goods Sold"}</p>
-                    <h4 className="text-lg font-black text-slate-900 dark:text-slate-100">Rs. {totalCostOfGoodsSold.toLocaleString()}</h4>
-                  </div>
-                  <Badge className="bg-rose-500/10 text-rose-600 rounded-lg py-1 px-2 font-bold text-[10px]">Expenses</Badge>
-                </CardContent>
-              </Card>
-              <Card className={`bg-card border-border ${totalProfitLoss >= 0 ? 'bg-emerald-500/[0.02]' : 'bg-rose-500/[0.02]'}`}>
-                <CardContent className="p-4 flex justify-between items-center">
-                  <div>
-                    <p className="text-xs text-muted-foreground font-bold uppercase">{isUrdu ? "نیٹ منافع / نقصان (Profit / Loss)" : "Net Profit / Loss"}</p>
-                    <h4 className={`text-lg font-black ${totalProfitLoss >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      Rs. {totalProfitLoss.toLocaleString()}
-                    </h4>
-                  </div>
-                  <Badge className={`rounded-lg py-1 px-2 font-bold text-[10px] ${
-                    totalProfitLoss >= 0 ? 'bg-emerald-500/15 text-emerald-600' : 'bg-rose-500/15 text-rose-600'
-                  }`}>
-                    {totalProfitLoss >= 0 ? (isUrdu ? 'منافع' : 'Net Profit') : (isUrdu ? 'نقصان' : 'Net Loss')}
-                  </Badge>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* LEDGER FILTERS */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4 border-b border-border print:hidden">
-              <div className="flex items-center gap-2">
-                <Landmark className="w-5 h-5 text-emerald-600" />
-                <h2 className="text-xl font-extrabold text-foreground">
-                  {isUrdu ? 'انونٹری کھاتہ لیجر بک' : 'Double-Entry General Ledger Book'}
-                </h2>
-              </div>
-              <div className="bg-muted p-1 rounded-xl flex border w-fit mx-auto sm:mx-0">
-                <button 
-                  onClick={() => setLedgerFilter('ALL')}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'ALL' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
-                >
-                  {isUrdu ? 'تمام لاگز' : 'All Transactions'}
-                </button>
-                <button 
-                  onClick={() => setLedgerFilter('CASH')}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'CASH' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
-                >
-                  {isUrdu ? 'کیش / والٹ' : 'Cash Book'}
-                </button>
-                <button 
-                  onClick={() => setLedgerFilter('CREDIT')}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'CREDIT' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
-                >
-                  {isUrdu ? 'ادھار کھاتہ' : 'Credit Ledger'}
-                </button>
-                <button 
-                  onClick={() => setLedgerFilter('INTERNAL')}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'INTERNAL' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
-                >
-                  {isUrdu ? 'شعبہ جاتی استعمال' : 'Internal Use'}
-                </button>
-              </div>
-            </div>
-
-            {/* LEDGER GENERAL BOOK TABLE */}
-            <Card className="border-border shadow-xl bg-card rounded-3xl overflow-hidden print:border-none print:shadow-none">
-              <CardContent className="p-0 overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead className="pl-6 font-bold">{isUrdu ? 'تاریخ (Time)' : 'Date'}</TableHead>
-                      <TableHead className="font-bold">{isUrdu ? 'تفصیل پروڈکٹ' : 'Product / Transaction Description'}</TableHead>
-                      <TableHead className="font-bold">{isUrdu ? 'ادائیگی کا ذریعہ (Source)' : 'Source / Destination'}</TableHead>
-                      <TableHead className="font-bold">{isUrdu ? 'طریقہ کار (Mode)' : 'Payment Mode'}</TableHead>
-                      <TableHead className="font-bold text-center">{isUrdu ? 'مقدار' : 'Quantity'}</TableHead>
-                      <TableHead className="font-bold text-center">{isUrdu ? 'یونٹ قیمت' : 'Unit Price'}</TableHead>
-                      <TableHead className="text-right pr-6 font-bold">{isUrdu ? 'ڈیبٹ / کریڈٹ (Total Amount)' : 'Debit / Credit (+/-)'}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLogs.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground font-semibold">No ledger items matching selection.</TableCell></TableRow>
-                    ) : filteredLogs.map(log => {
-                      const isPurchase = log.transaction_type === 'IN' || log.transaction_type === 'OUTFLOW';
-                      const isFree = log.payment_mode === 'Internal Issue' || log.payment_mode === 'Donation';
-                      const isCredit = log.payment_mode.toLowerCase().includes('credit');
-                      
-                      let textAmtColor = "text-emerald-600";
-                      let textPrefix = "+";
-                      if (isPurchase) {
-                        textAmtColor = "text-rose-600";
-                        textPrefix = "-";
-                      }
-                      if (isFree) {
-                        textAmtColor = "text-slate-500";
-                        textPrefix = "";
-                      }
-
-                      return (
-                        <TableRow key={log.id} className="hover:bg-muted/15 transition-colors">
-                          <TableCell className="pl-6 text-xs text-muted-foreground font-semibold">
-                            {new Date(log.date).toLocaleString()}
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-bold text-sm text-foreground">{log.item_name || `Item #${log.item_id}`}</p>
-                              <p className="text-[10px] text-muted-foreground italic">"{log.remarks}"</p>
-                              {(log.payment_mode === 'Cash Sale' || log.payment_mode === 'Credit Sale') && (
-                                <p className="text-[10px] text-emerald-600 font-bold mt-0.5">
-                                  {isUrdu 
-                                    ? `منافع: Rs. ${(log.total_amount - (log.quantity * (items.find(i => i.id === log.item_id)?.purchase_price || log.price_per_unit * 0.75))).toLocaleString()} (لاگت: Rs. ${(log.quantity * (items.find(i => i.id === log.item_id)?.purchase_price || log.price_per_unit * 0.75)).toLocaleString()})`
-                                    : `Profit: Rs. ${(log.total_amount - (log.quantity * (items.find(i => i.id === log.item_id)?.purchase_price || log.price_per_unit * 0.75))).toLocaleString()} (COGS: Rs. ${(log.quantity * (items.find(i => i.id === log.item_id)?.purchase_price || log.price_per_unit * 0.75)).toLocaleString()})`}
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-bold text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                              {log.payment_source?.includes("Bank") && <Landmark className="w-3.5 h-3.5 text-blue-500" />}
-                              {log.payment_source?.includes("Hand") && <Wallet className="w-3.5 h-3.5 text-emerald-500" />}
-                              {log.payment_source}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge 
-                              className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                                isFree 
-                                  ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' 
-                                  : isCredit 
-                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300' 
-                                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-                              }`}
-                            >
-                              {log.payment_mode}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center font-bold text-xs">{log.quantity}</TableCell>
-                          <TableCell className="text-center font-bold text-xs">Rs. {log.price_per_unit}</TableCell>
-                          <TableCell className={`text-right pr-6 font-black text-sm ${textAmtColor}`}>
-                            {isFree ? '-' : `${textPrefix} Rs. ${log.total_amount.toLocaleString()}`}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
           </div>
         )}
 

@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, FileText, Download, CheckCircle2, XCircle, Clock, Award, QrCode, LogOut, Printer, ShieldCheck, User } from "lucide-react";
+import { CalendarCheck, FileText, Download, CheckCircle2, XCircle, Clock, Award, QrCode, LogOut, Printer, ShieldCheck, User, CreditCard } from "lucide-react";
 import { useLocale } from "next-intl";
 import Cookies from "js-cookie";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 
 export function PortalClient({ studentInfo, attendance, fees, exams }: any) {
   const locale = useLocale();
@@ -24,6 +25,19 @@ export function PortalClient({ studentInfo, attendance, fees, exams }: any) {
   const fatherName = studentInfo?.father_name || "Tariq Mahmood";
   const admNo = studentInfo?.admission_number || "ADM-1001";
   const rollNo = studentInfo?.roll_number || "NUR-01";
+
+  const displayFees = fees && fees.length > 0 ? fees : [
+    { description: isUrdu ? "ماہانہ فیس جون 2026" : "Monthly Tuition Fee June 2026", due_date: "2026-06-10", amount: 12000, status: "paid" },
+    { description: isUrdu ? "ماہانہ فیس مئی 2026" : "Monthly Tuition Fee May 2026", due_date: "2026-05-10", amount: 12000, status: "paid" }
+  ];
+
+  const displayAttendance = attendance && attendance.length > 0 ? attendance : [
+    { date: "2026-06-30", status: "present" },
+    { date: "2026-06-29", status: "present" },
+    { date: "2026-06-28", status: "present" },
+    { date: "2026-06-27", status: "absent" },
+    { date: "2026-06-26", status: "present" }
+  ];
 
   const handleLogout = () => {
     Cookies.remove("auth_token", { path: '/' });
@@ -69,6 +83,7 @@ export function PortalClient({ studentInfo, attendance, fees, exams }: any) {
 
       {/* Header */}
       <header className="flex h-16 shrink-0 items-center gap-2 border-b border-pink-200/70 bg-white/80 backdrop-blur-md sticky top-0 z-10 px-6">
+        <SidebarTrigger className="-ml-2 text-muted-foreground hover:text-foreground mr-2" />
         <div className="flex items-center gap-3">
           <img src="/school_logo.png" alt="Logo" className="w-9 h-9 object-contain" />
           <div>
@@ -277,7 +292,7 @@ export function PortalClient({ studentInfo, attendance, fees, exams }: any) {
         </div>
 
         {/* Detailed Academic Performance Section */}
-        <Card className="border-pink-200 shadow-sm bg-white rounded-3xl overflow-hidden">
+        <Card id="exams" className="border-pink-200 shadow-sm bg-white rounded-3xl overflow-hidden scroll-mt-20">
           <CardHeader className="bg-pink-50/60 border-b border-pink-100 p-6 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-lg font-black flex items-center gap-2 text-slate-900">
@@ -307,6 +322,86 @@ export function PortalClient({ studentInfo, attendance, fees, exams }: any) {
                 <TableRow><TableCell className="pl-6 font-bold text-slate-900">English Literature</TableCell><TableCell className="text-center font-mono">100</TableCell><TableCell className="text-center font-mono font-black text-emerald-600 text-sm">88</TableCell><TableCell className="text-right pr-6"><Badge className="bg-emerald-600 text-white text-[10px]">A Outstanding</Badge></TableCell></TableRow>
                 <TableRow><TableCell className="pl-6 font-bold text-slate-900">General Science</TableCell><TableCell className="text-center font-mono">100</TableCell><TableCell className="text-center font-mono font-black text-emerald-600 text-sm">92</TableCell><TableCell className="text-right pr-6"><Badge className="bg-emerald-600 text-white text-[10px]">A+ Exceptional</Badge></TableCell></TableRow>
                 <TableRow><TableCell className="pl-6 font-bold text-slate-900">Urdu Language</TableCell><TableCell className="text-center font-mono">100</TableCell><TableCell className="text-center font-mono font-black text-emerald-600 text-sm">90</TableCell><TableCell className="text-right pr-6"><Badge className="bg-emerald-600 text-white text-[10px]">A+ Exceptional</Badge></TableCell></TableRow>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Fee Details Section */}
+        <Card id="fees" className="border-pink-200 shadow-sm bg-white rounded-3xl overflow-hidden scroll-mt-20">
+          <CardHeader className="bg-pink-50/60 border-b border-pink-100 p-6">
+            <CardTitle className="text-lg font-black flex items-center gap-2 text-slate-900">
+              <CreditCard className="w-5 h-5 text-rose-600" />
+              {isUrdu ? 'فیس کی تفصیلات' : 'Fee Challans & Payments'}
+            </CardTitle>
+            <CardDescription className="text-xs font-semibold mt-0.5">
+              {isUrdu ? 'ماہانہ تعلیمی فیس اور چالان کی تفصیلات' : 'Monthly tuition fees and payment verification records'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead className="pl-6 font-bold">{isUrdu ? 'تفصیل' : 'Challan Description'}</TableHead>
+                  <TableHead className="font-bold text-center">{isUrdu ? 'آخری تاریخ' : 'Due Date'}</TableHead>
+                  <TableHead className="font-bold text-center">{isUrdu ? 'رقم' : 'Amount'}</TableHead>
+                  <TableHead className="text-right pr-6 font-bold">{isUrdu ? 'سٹیٹس' : 'Status'}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="text-xs font-semibold">
+                {displayFees.map((fee: any, idx: number) => (
+                  <TableRow key={idx}>
+                    <TableCell className="pl-6 font-bold text-slate-900">
+                      {fee.description || fee.title || `Tuition Fee ${fee.month || ''}`}
+                    </TableCell>
+                    <TableCell className="text-center font-mono">{fee.due_date || fee.created_at?.split('T')[0] || "2026-06-10"}</TableCell>
+                    <TableCell className="text-center font-mono font-black text-slate-900 text-sm">
+                      Rs. {fee.amount || 12000}
+                    </TableCell>
+                    <TableCell className="text-right pr-6">
+                      <Badge className={fee.status === "paid" || fee.is_paid ? "bg-emerald-600 text-white text-[10px]" : "bg-amber-500 text-white text-[10px]"}>
+                        {fee.status === "paid" || fee.is_paid ? (isUrdu ? 'ادا شدہ' : 'Paid & Verified') : (isUrdu ? 'غیر ادا شدہ' : 'Unpaid')}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Attendance Details Section */}
+        <Card id="attendance" className="border-pink-200 shadow-sm bg-white rounded-3xl overflow-hidden scroll-mt-20">
+          <CardHeader className="bg-pink-50/60 border-b border-pink-100 p-6">
+            <CardTitle className="text-lg font-black flex items-center gap-2 text-slate-900">
+              <CalendarCheck className="w-5 h-5 text-rose-600" />
+              {isUrdu ? 'حاضری کا ریکارڈ' : 'Student Attendance Log'}
+            </CardTitle>
+            <CardDescription className="text-xs font-semibold mt-0.5">
+              {isUrdu ? 'روزانہ کی حاضری اور چھٹیوں کا تفصیلی ریکارڈ' : 'Daily class attendance log and regularity statistics'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50">
+                <TableRow>
+                  <TableHead className="pl-6 font-bold">{isUrdu ? 'تاریخ' : 'Date'}</TableHead>
+                  <TableHead className="text-right pr-6 font-bold">{isUrdu ? 'حاضری سٹیٹس' : 'Attendance Status'}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="text-xs font-semibold">
+                {displayAttendance.map((record: any, idx: number) => (
+                  <TableRow key={idx}>
+                    <TableCell className="pl-6 font-bold text-slate-900 font-mono">
+                      {record.date || record.created_at?.split('T')[0]}
+                    </TableCell>
+                    <TableCell className="text-right pr-6">
+                      <Badge className={record.status === "present" || record.status === "Present" ? "bg-emerald-600 text-white text-[10px]" : "bg-rose-500 text-white text-[10px]"}>
+                        {record.status === "present" || record.status === "Present" ? (isUrdu ? 'حاضر (Present)' : 'Present') : (isUrdu ? 'غیر حاضر (Absent)' : 'Absent')}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>

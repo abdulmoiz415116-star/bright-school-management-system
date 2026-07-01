@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Plus, Loader2, Trash2, Receipt, WalletCards, Activity, Printer, X, Pencil, MessageSquare, Stamp, CheckCircle2 } from "lucide-react";
+import { DollarSign, Plus, Loader2, Trash2, Receipt, WalletCards, Activity, Printer, X, Pencil, MessageSquare, Stamp, CheckCircle2, Landmark, CreditCard } from "lucide-react";
 import { useLocale } from "next-intl";
 
 // Types
@@ -21,13 +21,66 @@ type Journal = { id: string; account_id: string; amount: number; type: string; d
 type Payroll = { id: string; employee_id: string; month_year: string; basic_salary: number; allowances: number; deductions: number; net_salary: number; status: string; payment_date: string; employees?: { employee_code?: string; profiles?: { full_name?: string; } } };
 
 export function FinanceClient({ 
-  initialFees, studentsList, initialAccounts, initialJournal, initialPayroll, employeesList 
+  initialFees, studentsList, initialAccounts, initialJournal, initialPayroll, employeesList, inventoryLogs 
 }: { 
-  initialFees: Fee[], studentsList: any[], initialAccounts: Account[], initialJournal: Journal[], initialPayroll: Payroll[], employeesList: any[] 
+  initialFees: Fee[], studentsList: any[], initialAccounts: Account[], initialJournal: Journal[], initialPayroll: Payroll[], employeesList: any[], inventoryLogs: any[] 
 }) {
   const locale = useLocale();
   const isUrdu = locale === 'ur';
-  const [activeTab, setActiveTab] = useState<'fees' | 'payroll' | 'ledger'>('fees');
+  const [activeTab, setActiveTab] = useState<'fees' | 'payroll' | 'ledger' | 'cashbook'>('fees');
+  const [ledgerFilter, setLedgerFilter] = useState<'ALL' | 'CASH' | 'CREDIT' | 'INTERNAL'>('ALL');
+  
+  const [cashInHand, setCashInHand] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("bs_inventory_cash_in_hand_v5");
+      if (saved) return parseFloat(saved) || 45000;
+    }
+    return 45000;
+  });
+
+  const [bankBalance, setBankBalance] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("bs_inventory_bank_balance_v5");
+      if (saved) return parseFloat(saved) || 150000;
+    }
+    return 150000;
+  });
+
+  const [logs, setLogs] = useState<any[]>(inventoryLogs);
+  
+  useEffect(() => {
+    setLogs(inventoryLogs);
+  }, [inventoryLogs]);
+
+  // Calculations for displayLogs
+  const DEFAULT_LOGS = [
+    { id: 1, date: new Date(Date.now() - 3600000 * 24).toISOString().split('T')[0], item_name: "Premium Student Diaries", transaction_type: "IN", quantity: 150, unit_price: 250, total_amount: 37500, payment_mode: "Cash Purchase", cash_source: "Cash in Hand", remarks: "Imported diaries for Nursery wing" },
+    { id: 2, date: new Date(Date.now() - 3600000 * 12).toISOString().split('T')[0], item_name: "School Uniform Crest Badges", transaction_type: "IN", quantity: 500, unit_price: 30, total_amount: 15000, payment_mode: "Bank Transfer", cash_source: "Bank", remarks: "Supplier bulk badge order" },
+    { id: 3, date: new Date(Date.now() - 3600000 * 8).toISOString().split('T')[0], item_name: "Montessori School Bags", transaction_type: "OUT", quantity: 20, unit_price: 1500, total_amount: 30000, payment_mode: "Cash Sale", cash_source: "Cash in Hand", remarks: "Sold to Nursery class parents" },
+    { id: 4, date: new Date(Date.now() - 3600000 * 4).toISOString().split('T')[0], item_name: "General Stationery Pack", transaction_type: "OUT", quantity: 5, unit_price: 0, total_amount: 0, payment_mode: "Internal Issue", cash_source: "Free", remarks: "Issued to Staff room coordinators" }
+  ];
+  
+  const displayLogs = logs && logs.length > 0 ? logs : DEFAULT_LOGS;
+
+  const totalSalesRevenue = displayLogs
+    .filter((l: any) => l.transaction_type === 'OUT' && (l.payment_mode === 'Cash Sale' || l.payment_mode === 'Credit Sale' || l.payment_mode === 'Cash Sale (کیش سیل)'))
+    .reduce((sum: number, log: any) => sum + (log.total_amount || 0), 0);
+
+  const totalCostOfGoodsSold = displayLogs
+    .filter((l: any) => l.transaction_type === 'OUT' && (l.payment_mode === 'Cash Sale' || l.payment_mode === 'Credit Sale' || l.payment_mode === 'Cash Sale (کیش سیل)'))
+    .reduce((sum: number, log: any) => {
+      return sum + (log.quantity * (log.unit_price * 0.6));
+    }, 0);
+
+  const totalProfitLoss = totalSalesRevenue - totalCostOfGoodsSold;
+
+  const filteredLogs = displayLogs.filter((l: any) => {
+    if (ledgerFilter === 'ALL') return true;
+    if (ledgerFilter === 'CASH') return (l.payment_mode || '').toLowerCase().includes('cash') || (l.payment_mode || '') === 'Supplier Payment' || (l.payment_mode || '') === 'Bank Transfer';
+    if (ledgerFilter === 'CREDIT') return (l.payment_mode || '').toLowerCase().includes('credit');
+    if (ledgerFilter === 'INTERNAL') return (l.payment_mode || '').toLowerCase().includes('internal') || (l.payment_mode || '').toLowerCase().includes('free');
+    return true;
+  });
   
   const [fees, setFees] = useState<Fee[]>(initialFees);
   const [journal, setJournal] = useState<Journal[]>(initialJournal);
@@ -433,10 +486,11 @@ export function FinanceClient({
             </h1>
             <p className="text-muted-foreground mt-1">{isUrdu ? 'فیس کی وصولی، چالان پرنٹنگ اور پے رول ہسٹری' : 'Manage fees, vouchers, payroll, and general ledger.'}</p>
           </div>
-          <div className="flex bg-muted p-1 rounded-lg">
-            <button onClick={() => setActiveTab('fees')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'fees' ? 'bg-background shadow text-foreground font-bold' : 'text-muted-foreground hover:text-foreground'}`}>Fees & Vouchers</button>
-            <button onClick={() => setActiveTab('payroll')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'payroll' ? 'bg-background shadow text-foreground font-bold' : 'text-muted-foreground hover:text-foreground'}`}>Payroll & Slips</button>
-            <button onClick={() => setActiveTab('ledger')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'ledger' ? 'bg-background shadow text-foreground font-bold' : 'text-muted-foreground hover:text-foreground'}`}>Ledger</button>
+          <div className="bg-muted p-1.5 rounded-2xl flex border border-border/50 max-w-lg print:hidden overflow-x-auto gap-1">
+            <button onClick={() => setActiveTab('fees')} className={`px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${activeTab === 'fees' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'}`}>Fees & Dues</button>
+            <button onClick={() => setActiveTab('payroll')} className={`px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${activeTab === 'payroll' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'}`}>Payroll & Slips</button>
+            <button onClick={() => setActiveTab('cashbook')} className={`px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${activeTab === 'cashbook' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'}`}>{isUrdu ? 'کیش بک (Cash Book)' : 'Cash Book'}</button>
+            <button onClick={() => setActiveTab('ledger')} className={`px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${activeTab === 'ledger' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'}`}>General Ledger</button>
           </div>
         </div>
 
@@ -599,7 +653,7 @@ export function FinanceClient({
         )}
 
         {activeTab === 'ledger' && (
-          <div className="grid gap-8 lg:grid-cols-3">
+          <div className="grid gap-8 lg:grid-cols-3 animate-in fade-in duration-300">
             <Card className="lg:col-span-1 border-border shadow-sm bg-card h-fit">
               <CardHeader className="bg-muted/50 border-b border-border"><CardTitle>Journal Entry</CardTitle></CardHeader>
               <CardContent className="pt-6">
@@ -638,6 +692,148 @@ export function FinanceClient({
                     </TableRow>
                   ))}
                 </TableBody></Table>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* TAB 3: CASH BOOK (MOVED FROM INVENTORY) */}
+        {activeTab === 'cashbook' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Profit & Loss metrics cards */}
+            <div className="grid gap-4 md:grid-cols-3 print:hidden">
+              <Card className="bg-card border-border">
+                <CardContent className="p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-bold uppercase">{isUrdu ? "فروخت سے کل آمدنی (Revenue)" : "Sales Revenue"}</p>
+                    <h4 className="text-lg font-black text-slate-900 dark:text-slate-100">Rs. {totalSalesRevenue.toLocaleString()}</h4>
+                  </div>
+                  <Badge className="bg-blue-500/10 text-blue-600 rounded-lg py-1 px-2 font-bold text-[10px]">Income</Badge>
+                </CardContent>
+              </Card>
+              <Card className="bg-card border-border">
+                <CardContent className="p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-bold uppercase">{isUrdu ? "فروخت شدہ مال کی لاگت (COGS)" : "Cost of Goods Sold"}</p>
+                    <h4 className="text-lg font-black text-slate-900 dark:text-slate-100">Rs. {totalCostOfGoodsSold.toLocaleString()}</h4>
+                  </div>
+                  <Badge className="bg-rose-500/10 text-rose-600 rounded-lg py-1 px-2 font-bold text-[10px]">Expenses</Badge>
+                </CardContent>
+              </Card>
+              <Card className={`bg-card border-border ${totalProfitLoss >= 0 ? 'bg-emerald-500/[0.02]' : 'bg-rose-500/[0.02]'}`}>
+                <CardContent className="p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-bold uppercase">{isUrdu ? "نیٹ منافع / نقصان (Profit / Loss)" : "Net Profit / Loss"}</p>
+                    <h4 className={`text-lg font-black ${totalProfitLoss >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      Rs. {totalProfitLoss.toLocaleString()}
+                    </h4>
+                  </div>
+                  <Badge className={`rounded-lg py-1 px-2 font-bold text-[10px] ${
+                    totalProfitLoss >= 0 ? 'bg-emerald-500/15 text-emerald-600' : 'bg-rose-500/15 text-rose-600'
+                  }`}>
+                    {totalProfitLoss >= 0 ? (isUrdu ? 'منافع' : 'Net Profit') : (isUrdu ? 'نقصان' : 'Net Loss')}
+                  </Badge>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Balances summary cards */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="border-border bg-card">
+                <CardContent className="p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-bold uppercase">{isUrdu ? "نقد رقم (Cash in Hand)" : "Cash in Hand Balance"}</p>
+                    <h3 className="text-2xl font-black text-emerald-600">Rs. {cashInHand.toLocaleString()}</h3>
+                  </div>
+                  <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><WalletCards className="w-5 h-5"/></div>
+                </CardContent>
+              </Card>
+              <Card className="border-border bg-card">
+                <CardContent className="p-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-bold uppercase">{isUrdu ? "بینک اکاؤنٹ (Bank Balance)" : "Bank Account Balance"}</p>
+                    <h3 className="text-2xl font-black text-emerald-600">Rs. {bankBalance.toLocaleString()}</h3>
+                  </div>
+                  <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Landmark className="w-5 h-5"/></div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* LEDGER FILTERS */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4 border-b border-border print:hidden">
+              <div className="flex items-center gap-2">
+                <Landmark className="w-5 h-5 text-emerald-600" />
+                <h2 className="text-xl font-extrabold text-foreground">
+                  {isUrdu ? 'کیش بک کھاتہ لیجر بک' : 'General Ledger & Cash Book'}
+                </h2>
+              </div>
+              <div className="bg-muted p-1 rounded-xl flex border w-fit mx-auto sm:mx-0">
+                <button 
+                  onClick={() => setLedgerFilter('ALL')}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'ALL' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
+                >
+                  {isUrdu ? 'تمام لاگز' : 'All Transactions'}
+                </button>
+                <button 
+                  onClick={() => setLedgerFilter('CASH')}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'CASH' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
+                >
+                  {isUrdu ? 'کیش / بینک' : 'Cash Book'}
+                </button>
+                <button 
+                  onClick={() => setLedgerFilter('CREDIT')}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'CREDIT' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
+                >
+                  {isUrdu ? 'ادھار کھاتہ' : 'Credit Ledger'}
+                </button>
+                <button 
+                  onClick={() => setLedgerFilter('INTERNAL')}
+                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'INTERNAL' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
+                >
+                  {isUrdu ? 'شعبہ جاتی استعمال' : 'Internal Use'}
+                </button>
+              </div>
+            </div>
+
+            {/* LEDGER GENERAL BOOK TABLE */}
+            <Card className="border-border shadow-xl bg-card rounded-3xl overflow-hidden print:border-none print:shadow-none">
+              <CardContent className="p-0 overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="pl-6 font-bold">{isUrdu ? 'تاریخ (Time)' : 'Date'}</TableHead>
+                      <TableHead className="font-bold">{isUrdu ? 'تفصیل ٹرانزیکشن' : 'Description / Item Name'}</TableHead>
+                      <TableHead className="font-bold">{isUrdu ? 'ادائیگی کا ذریعہ (Source)' : 'Wallet Source'}</TableHead>
+                      <TableHead className="font-bold">{isUrdu ? 'طریقہ کار (Mode)' : 'Payment Mode'}</TableHead>
+                      <TableHead className="font-bold text-center">{isUrdu ? 'مقدار' : 'Quantity'}</TableHead>
+                      <TableHead className="font-bold text-center">{isUrdu ? 'یونٹ قیمت' : 'Unit Price'}</TableHead>
+                      <TableHead className="text-right pr-6 font-bold">{isUrdu ? 'ڈیبٹ / کریڈٹ (Amount)' : 'Total Amount (+/-)'}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-xs font-semibold">
+                    {filteredLogs.map((log: any, idx: number) => {
+                      const isExpense = log.transaction_type === 'IN' || log.payment_mode === 'Supplier Payment';
+                      return (
+                        <TableRow key={idx}>
+                          <TableCell className="pl-6 font-bold font-mono text-slate-500">{log.date?.split('T')[0]}</TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-black text-slate-800 dark:text-slate-200">{log.item_name || log.description || 'Transaction'}</p>
+                              {log.remarks && <p className="text-[10px] text-muted-foreground italic mt-0.5">"{log.remarks}"</p>}
+                            </div>
+                          </TableCell>
+                          <TableCell><Badge variant="outline" className="font-bold">{log.cash_source || 'N/A'}</Badge></TableCell>
+                          <TableCell><Badge className="bg-slate-100 text-slate-800 font-bold border">{log.payment_mode || 'N/A'}</Badge></TableCell>
+                          <TableCell className="text-center font-mono">{log.quantity || 1}</TableCell>
+                          <TableCell className="text-center font-mono">Rs. {Number(log.unit_price || 0).toLocaleString()}</TableCell>
+                          <TableCell className={`text-right pr-6 font-mono font-black text-sm ${isExpense ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {isExpense ? '-' : '+'}Rs. {Number(log.total_amount || 0).toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </div>

@@ -17,10 +17,85 @@ export default async function FinancePage() {
   const { data: journalEntries } = await supabase.from('journal_entries').select('*, chart_of_accounts(name, code)').order('entry_date', { ascending: false });
 
   // Fetch payroll
-  const { data: payroll } = await supabase.from('payroll').select('*, employees(employee_code, profiles(full_name))').order('month_year', { ascending: false });
+  const { data: payroll } = await supabase.from('payroll').select('*').order('month_year', { ascending: false });
 
-  // Fetch employees for dropdown
-  const { data: employees } = await supabase.from('employees').select('id, employee_code, basic_salary, profiles(full_name)');
+  // Fetch teachers for payroll dropdown
+  const { data: dbTeachers } = await supabase.from('teachers').select('id, name, salary, employee_id');
+
+  // Fetch staff for payroll dropdown
+  const { data: dbStaff } = await supabase.from('staff').select('id, name, salary, cnic, role');
+
+  // Fetch inventory logs for Cash Book
+  const { data: inventoryLogs } = await supabase
+    .from('inventory_logs')
+    .select('*')
+    .order('date', { ascending: false });
+
+  const dummyTeachers = [
+    { id: 8801, name: "Prof. Tariq Mahmood", salary: 75000, employee_id: "TCH-101" },
+    { id: 8802, name: "Mrs. Ayesha Saddiqa", salary: 65000, employee_id: "TCH-102" },
+    { id: 8803, name: "Miss Sana Malik", salary: 60000, employee_id: "TCH-103" },
+    { id: 8804, name: "Sir Hamza Ali", salary: 58000, employee_id: "TCH-104" },
+    { id: 8805, name: "Miss Hira Khan", salary: 52000, employee_id: "TCH-105" },
+    { id: 8806, name: "Sir Bilal Ahmed", salary: 50000, employee_id: "TCH-106" },
+    { id: 8807, name: "Miss Zainab Malik", salary: 55000, employee_id: "TCH-107" },
+    { id: 8808, name: "Sir Usman Ghani", salary: 58000, employee_id: "TCH-108" },
+    { id: 8809, name: "Miss Mariam Noor", salary: 48000, employee_id: "TCH-109" },
+    { id: 8810, name: "Sir Haroon Rasheed", salary: 50000, employee_id: "TCH-110" }
+  ];
+
+  const dummyStaff = [
+    { id: 7701, name: "Tariq Jamil (طارق جمیل)", salary: 45000, role: "Security Officer" },
+    { id: 7702, name: "Muhammad Usman", salary: 55000, role: "Accountant" },
+    { id: 7703, name: "Rashid Minhas", salary: 32000, role: "Transport Driver" },
+    { id: 7704, name: "Ghulam Fatima", salary: 38000, role: "Office Assistant" },
+    { id: 7705, name: "Allah Ditta", salary: 30000, role: "Security Guard" },
+    { id: 7706, name: "Shazia Parveen", salary: 28000, role: "Female Attendant" },
+    { id: 7707, name: "Muhammad Akram", salary: 35000, role: "Maintenance Electrician" },
+    { id: 7708, name: "Riaz Masih", salary: 26000, role: "Sanitary Worker" },
+    { id: 7709, name: "Nasreen Bibi", salary: 32000, role: "Lab Assistant" },
+    { id: 7710, name: "Kamran Shah", salary: 36000, role: "IT Lab Assistant" }
+  ];
+
+  // Map database teachers
+  const dbTeachersMapped = (dbTeachers || []).map((t: any) => ({
+    id: `teacher_${t.id}`,
+    name: t.name,
+    salary: Number(t.salary || 0),
+    employee_code: t.employee_id || `TCH-${t.id}`
+  }));
+
+  // Map database staff
+  const dbStaffMapped = (dbStaff || []).map((s: any) => ({
+    id: `staff_${s.id}`,
+    name: s.name,
+    salary: Number(s.salary || 0),
+    employee_code: `STF-${s.id}`
+  }));
+
+  // Map dummy teachers
+  const dummyTeachersMapped = dummyTeachers.map((t: any) => ({
+    id: `teacher_${t.id}`,
+    name: t.name,
+    salary: Number(t.salary || 0),
+    employee_code: t.employee_id
+  }));
+
+  // Map dummy staff
+  const dummyStaffMapped = dummyStaff.map((s: any) => ({
+    id: `staff_${s.id}`,
+    name: s.name,
+    salary: Number(s.salary || 0),
+    employee_code: `STF-${s.id}`
+  }));
+
+  // Combine lists
+  const combinedEmployees = [
+    ...dbTeachersMapped,
+    ...dbStaffMapped,
+    ...dummyTeachersMapped,
+    ...dummyStaffMapped
+  ];
 
   const dummyFees = [
     { id: 9901, amount: 5000, description: "Tuition Fee - June 2026", student_name: "Muhammad Ali Raza", created_at: new Date().toISOString() },
@@ -75,6 +150,7 @@ export default async function FinancePage() {
     initialAccounts={(accounts && accounts.length > 0 ? accounts : dummyAccounts) as any}
     initialJournal={(journalEntries && journalEntries.length > 0 ? journalEntries : dummyJournal) as any}
     initialPayroll={(payroll && payroll.length > 0 ? payroll : dummyPayroll) as any}
-    employeesList={employees || []}
+    employeesList={combinedEmployees}
+    inventoryLogs={inventoryLogs || []}
   />;
 }

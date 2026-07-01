@@ -1,9 +1,9 @@
 "use client";
 
-import { Home, Users, BookOpen, CreditCard, Settings, LogOut, Library, ShieldCheck, UserPlus, CalendarCheck, FileText, Bus, Building, Bell, Calendar, Package, GraduationCap, Award } from "lucide-react"
+import { Home, Users, BookOpen, CreditCard, Settings, LogOut, Library, ShieldCheck, UserPlus, CalendarCheck, FileText, Bus, Building, Bell, Calendar, Package, GraduationCap, Award, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import { useTranslations, useLocale } from "next-intl"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import Cookies from "js-cookie"
 import {
@@ -30,7 +30,7 @@ import {
 import { LanguageSwitcher } from "./LanguageSwitcher"
 import { useAdminProfile } from "@/hooks/useAdminProfile"
 
-const getItems = (t: any, isUrdu: boolean) => [
+const getAdminItems = (t: any, isUrdu: boolean) => [
   { title: t("dashboard"), url: "/", icon: Home },
   { title: t("admission"), url: "/admission", icon: GraduationCap },
   { title: isUrdu ? "رزلٹ کارڈز" : "Result Cards", url: "/results", icon: Award },
@@ -44,12 +44,20 @@ const getItems = (t: any, isUrdu: boolean) => [
   { title: t("staff"), url: "/staff", icon: ShieldCheck },
   { title: t("parents"), url: "/parents", icon: UserPlus },
   { title: t("finance"), url: "/finance", icon: CreditCard },
+  { title: isUrdu ? "رپورٹس اور تجزیات" : "Reports & Analytics", url: "/reports", icon: BarChart3 },
   { title: t("notices"), url: "/notices", icon: Bell },
   { title: t("library"), url: "/library", icon: BookOpen },
   { title: t("transport"), url: "/transport", icon: Bus },
   { title: t("hostel"), url: "/hostel", icon: Building },
   { title: t("inventory"), url: "/inventory", icon: Package },
   { title: t("settings"), url: "/settings", icon: Settings },
+]
+
+const getParentItems = (isUrdu: boolean) => [
+  { title: isUrdu ? "بچے کی تفصیلات" : "Child Details", url: "/portal/parents", icon: Home },
+  { title: isUrdu ? "رزلٹ کارڈ" : "Result Card", url: "/portal/parents#exams", icon: Award },
+  { title: isUrdu ? "فیس کی تفصیلات" : "Fee Details", url: "/portal/parents#fees", icon: CreditCard },
+  { title: isUrdu ? "حاضری" : "Attendance", url: "/portal/parents#attendance", icon: CalendarCheck },
 ]
 
 export function AppSidebar() {
@@ -59,6 +67,9 @@ export function AppSidebar() {
   const profile = useAdminProfile();
   const router = useRouter();
 
+  const pathname = usePathname();
+  const [role, setRole] = useState<string | null>(null);
+
   useEffect(() => {
     const cookieLocale = Cookies.get("NEXT_LOCALE");
     if (cookieLocale) {
@@ -66,6 +77,9 @@ export function AppSidebar() {
     } else {
       setActiveLocale(intlLocale);
     }
+
+    const currentRole = Cookies.get("user_role");
+    setRole(currentRole || "Super Admin");
   }, [intlLocale]);
 
   const handleLogout = () => {
@@ -80,7 +94,8 @@ export function AppSidebar() {
   };
 
   const isUrdu = activeLocale === 'ur';
-  const items = getItems(t, isUrdu);
+  const isParent = role === "Parent" || pathname?.startsWith("/portal");
+  const items = isParent ? getParentItems(isUrdu) : getAdminItems(t, isUrdu);
 
   return (
     <Sidebar side={isUrdu ? 'right' : 'left'} className="border-r-0 bg-sidebar/80 backdrop-blur-xl text-sidebar-foreground shadow-[10px_0_30px_rgb(0,0,0,0.03)] dark:shadow-[10px_0_30px_rgb(0,0,0,0.1)]">
@@ -134,12 +149,16 @@ export function AppSidebar() {
             render={
               <div className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded-xl transition-colors outline-none w-full text-left select-none">
                 <Avatar className="border-2 border-rose-400 shadow-sm">
-                  <AvatarImage src="/admin_avatar.png" />
-                  <AvatarFallback>AD</AvatarFallback>
+                  <AvatarImage src={isParent ? "/parent_avatar.png" : "/admin_avatar.png"} />
+                  <AvatarFallback>{isParent ? "PR" : "AD"}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden text-left rtl:text-right">
-                  <p className="text-sm font-bold text-foreground truncate">{profile.firstName} {profile.lastName}</p>
-                  <p className="text-xs text-rose-600 font-semibold truncate">Super Admin Panel</p>
+                  <p className="text-sm font-bold text-foreground truncate">
+                    {isParent ? (isUrdu ? "طارق محمود" : "Tariq Mahmood") : `${profile.firstName} ${profile.lastName}`}
+                  </p>
+                  <p className="text-xs text-rose-600 font-semibold truncate">
+                    {isParent ? (isUrdu ? "والدین پورٹل" : "Parent Portal") : (isUrdu ? "سپر ایڈمن پینل" : "Super Admin Panel")}
+                  </p>
                 </div>
               </div>
             }
@@ -147,15 +166,19 @@ export function AppSidebar() {
           <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 shadow-xl z-50 bg-white dark:bg-slate-900">
             <DropdownMenuLabel className="font-bold">{t("myAccount")}</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push('/profile')} className="w-full flex items-center cursor-pointer rounded-xl py-2 font-bold text-xs">
-              <Users className="mr-2 h-4 w-4 text-rose-600" />
-              <span>{isUrdu ? 'سپر ایڈمن پروفائل پورٹل' : 'Super Admin Profile'}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/settings')} className="w-full flex items-center cursor-pointer rounded-xl py-2 font-bold text-xs">
-              <Settings className="mr-2 h-4 w-4 text-slate-500" />
-              <span>{t("settings")}</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            {!isParent && (
+              <>
+                <DropdownMenuItem onClick={() => router.push('/profile')} className="w-full flex items-center cursor-pointer rounded-xl py-2 font-bold text-xs">
+                  <Users className="mr-2 h-4 w-4 text-rose-600" />
+                  <span>{isUrdu ? 'سپر ایڈمن پروفائل پورٹل' : 'Super Admin Profile'}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push('/settings')} className="w-full flex items-center cursor-pointer rounded-xl py-2 font-bold text-xs">
+                  <Settings className="mr-2 h-4 w-4 text-slate-500" />
+                  <span>{t("settings")}</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onClick={handleLogout} className="text-rose-600 focus:text-rose-600 cursor-pointer rounded-xl py-2 font-bold text-xs">
               <LogOut className="mr-2 h-4 w-4" />
               <span>{isUrdu ? 'لاگ آؤٹ کریں (Logout)' : 'Logout'}</span>

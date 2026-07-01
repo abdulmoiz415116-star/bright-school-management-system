@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+import { ClientLayout } from "@/components/ClientLayout";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getLocale } from 'next-intl/server';
@@ -43,12 +42,7 @@ export default async function RootLayout({
       <body className={`min-h-full flex flex-col bg-background text-foreground transition-colors duration-500 ${locale === 'ur' ? 'font-nastaleeq' : ''}`} suppressHydrationWarning>
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider>
-            <SidebarProvider>
-              <AppSidebar />
-              <main className="flex-1 flex flex-col min-h-screen overflow-x-hidden transition-all duration-300 ease-in-out">
-                {children}
-              </main>
-            </SidebarProvider>
+            <ClientLayout>{children}</ClientLayout>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>
