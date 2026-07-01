@@ -59,70 +59,24 @@ export function ClassesClient({
   const classesList = initialClasses.length > 0 ? initialClasses : defaultClasses;
 
   const dummyStudents: Student[] = [
-    // Playgroup
-    { id: 1001, name: "Muhammad Ayaan", admission_number: "ADM-2001", roll_number: "PG-01", father_name: "Tariq Mahmood", dob: "2021-04-12", gender: "Male", blood_group: "O+", address: "Johar Town, Lahore", mobile_number: "0300-1112221", class_name: "Playgroup" },
-    { id: 1002, name: "Zainab Fatima", admission_number: "ADM-2002", roll_number: "PG-02", father_name: "Asif Ali", dob: "2021-06-18", gender: "Female", blood_group: "A+", address: "Faisal Town, Lahore", mobile_number: "0300-1112222", class_name: "Playgroup" },
-    { id: 1003, name: "Eshal Omer", admission_number: "ADM-2003", roll_number: "PG-03", father_name: "Omer Farooq", dob: "2021-09-05", gender: "Female", blood_group: "B+", address: "Model Town, Lahore", mobile_number: "0300-1112223", class_name: "Playgroup" },
+    { id: 9901, name: 'Muhammad Ali Raza', admission_number: 'ADM-1001', roll_number: 'NUR-01', father_name: 'Tariq Mahmood', dob: '2019-05-15', gender: 'Male', blood_group: 'B+', address: 'Gulberg 3, Lahore', mobile_number: '0300-1234567', class_name: 'Nursery' },
+    { id: 9902, name: 'Syeda Fatima Zahra', admission_number: 'ADM-1002', roll_number: 'KG-05', father_name: 'Syed Hassan Shah', dob: '2018-08-20', gender: 'Female', blood_group: 'O+', address: 'DHA Phase 5, Lahore', mobile_number: '0321-9876543', class_name: 'Prep/KG' },
+    { id: 9903, name: 'Zainab Binte Bilal', admission_number: 'ADM-1003', roll_number: 'G1-12', father_name: 'Bilal Ahmad', dob: '2017-12-10', gender: 'Female', blood_group: 'A+', address: 'Johar Town, Lahore', mobile_number: '0301-5554433', class_name: 'Grade 1' },
+    { id: 9904, name: 'Hamza Tariq', admission_number: 'ADM-1004', roll_number: 'G2-08', father_name: 'Tariq Mahmood', dob: '2016-03-25', gender: 'Male', blood_group: 'AB+', address: 'Model Town, Lahore', mobile_number: '0333-1122334', class_name: 'Grade 2' },
+    { id: 9905, name: 'Ayesha Omer', admission_number: 'ADM-1005', roll_number: 'G3-15', father_name: 'Omer Farooq', dob: '2015-11-05', gender: 'Female', blood_group: 'O-', address: 'Faisal Town, Lahore', mobile_number: '0302-9988776', class_name: 'Grade 3' },
+    { id: 9906, name: 'Ibrahim Khalid', admission_number: 'ADM-1006', roll_number: 'G4-02', father_name: 'Khalid Pervez', dob: '2014-07-12', gender: 'Male', blood_group: 'B-', address: 'Cantt, Lahore', mobile_number: '0305-4433221', class_name: 'Grade 4' },
+    { id: 9907, name: 'Maryam Sajid', admission_number: 'ADM-1007', roll_number: 'G5-19', father_name: 'Sajid Ali', dob: '2013-02-18', gender: 'Female', blood_group: 'A-', address: 'Garden Town, Lahore', mobile_number: '0312-7766554', class_name: 'Grade 5' },
+    { id: 9908, name: 'Bilal Usman', admission_number: 'ADM-1008', roll_number: 'G6-11', father_name: 'Muhammad Usman', dob: '2012-09-30', gender: 'Male', blood_group: 'O+', address: 'Askari 10, Lahore', mobile_number: '0345-8899001', class_name: 'Grade 6' },
+    { id: 9909, name: 'Anaya Usman', admission_number: 'ADM-1009', roll_number: 'G7-04', father_name: 'Usman Ghani', dob: '2011-04-14', gender: 'Female', blood_group: 'AB-', address: 'Wapda Town, Lahore', mobile_number: '0323-3344556', class_name: 'Grade 7' },
+    { id: 9910, name: 'Abdullah Haroon', admission_number: 'ADM-1010', roll_number: 'G8-20', father_name: 'Haroon Rasheed', dob: '2010-01-22', gender: 'Male', blood_group: 'A+', address: 'Valencia Town, Lahore', mobile_number: '0306-6677889', class_name: 'Grade 8' },
     
-    // Nursery
-    { id: 1011, name: "Muhammad Ali Raza", admission_number: "ADM-1001", roll_number: "NUR-01", father_name: "Tariq Mahmood", dob: "2020-05-15", gender: "Male", blood_group: "B+", address: "Gulberg 3, Lahore", mobile_number: "0300-1234567", class_name: "Nursery" },
-    { id: 1012, name: "Areeba Khan", admission_number: "ADM-1012", roll_number: "NUR-02", father_name: "Khalid Pervez", dob: "2020-07-22", gender: "Female", blood_group: "AB+", address: "DHA Phase 6, Lahore", mobile_number: "0300-2223331", class_name: "Nursery" },
-    { id: 1013, name: "Ibrahim Ahmad", admission_number: "ADM-1013", roll_number: "NUR-03", father_name: "Bilal Ahmad", dob: "2020-03-10", gender: "Male", blood_group: "O-", address: "Johar Town, Lahore", mobile_number: "0300-2223332", class_name: "Nursery" },
-
-    // Prep/KG
-    { id: 1021, name: "Syeda Fatima Zahra", admission_number: "ADM-1002", roll_number: "KG-05", father_name: "Syed Hassan Shah", dob: "2019-08-20", gender: "Female", blood_group: "O+", address: "DHA Phase 5, Lahore", mobile_number: "0321-9876543", class_name: "Prep/KG" },
-    { id: 1022, name: "Hamza Tariq", admission_number: "ADM-1022", roll_number: "KG-02", father_name: "Tariq Mahmood", dob: "2019-11-25", gender: "Male", blood_group: "A+", address: "Model Town, Lahore", mobile_number: "0333-1122334", class_name: "Prep/KG" },
-    { id: 1023, name: "Anaya Usman", admission_number: "ADM-1023", roll_number: "KG-03", father_name: "Usman Ghani", dob: "2019-04-14", gender: "Female", blood_group: "B+", address: "Wapda Town, Lahore", mobile_number: "0323-3344556", class_name: "Prep/KG" },
-
-    // Grade 1
-    { id: 1031, name: "Zainab Binte Bilal", admission_number: "ADM-1003", roll_number: "G1-12", father_name: "Bilal Ahmad", dob: "2018-12-10", gender: "Female", blood_group: "A+", address: "Johar Town, Lahore", mobile_number: "0301-5554433", class_name: "Grade 1" },
-    { id: 1032, name: "Muhammad Yahya", admission_number: "ADM-1032", roll_number: "G1-02", father_name: "Yasir Mahmood", dob: "2018-09-08", gender: "Male", blood_group: "O+", address: "Garden Town, Lahore", mobile_number: "0300-3334441", class_name: "Grade 1" },
-    { id: 1033, name: "Sara Salman", admission_number: "ADM-1033", roll_number: "G1-03", father_name: "Salman Khan", dob: "2018-11-15", gender: "Female", blood_group: "B-", address: "Valencia Town, Lahore", mobile_number: "0300-3334442", class_name: "Grade 1" },
-
-    // Grade 2
-    { id: 1041, name: "Hamza Tariq", admission_number: "ADM-1004", roll_number: "G2-08", father_name: "Tariq Mahmood", dob: "2017-03-25", gender: "Male", blood_group: "AB+", address: "Model Town, Lahore", mobile_number: "0333-1122334", class_name: "Grade 2" },
-    { id: 1042, name: "Ayesha Omer", admission_number: "ADM-1042", roll_number: "G2-02", father_name: "Omer Farooq", dob: "2017-06-12", gender: "Female", blood_group: "O+", address: "Faisal Town, Lahore", mobile_number: "0302-9988776", class_name: "Grade 2" },
-    { id: 1043, name: "Muhammad Ibrahim", admission_number: "ADM-1043", roll_number: "G2-03", father_name: "Khalid Pervez", dob: "2017-08-30", gender: "Male", blood_group: "B-", address: "Cantt, Lahore", mobile_number: "0305-4433221", class_name: "Grade 2" },
-
-    // Grade 3
-    { id: 1051, name: "Ayesha Omer", admission_number: "ADM-1005", roll_number: "G3-15", father_name: "Omer Farooq", dob: "2016-11-05", gender: "Female", blood_group: "O-", address: "Faisal Town, Lahore", mobile_number: "0302-9988776", class_name: "Grade 3" },
-    { id: 1052, name: "Ibrahim Khalid", admission_number: "ADM-1052", roll_number: "G3-02", father_name: "Khalid Pervez", dob: "2016-07-12", gender: "Male", blood_group: "B-", address: "Cantt, Lahore", mobile_number: "0305-4433221", class_name: "Grade 3" },
-    { id: 1053, name: "Maryam Sajid", admission_number: "ADM-1053", roll_number: "G3-03", father_name: "Sajid Ali", dob: "2016-02-18", gender: "Female", blood_group: "A-", address: "Garden Town, Lahore", mobile_number: "0312-7766554", class_name: "Grade 3" },
-
-    // Grade 4
-    { id: 1061, name: "Ibrahim Khalid", admission_number: "ADM-1006", roll_number: "G4-02", father_name: "Khalid Pervez", dob: "2015-07-12", gender: "Male", blood_group: "B-", address: "Cantt, Lahore", mobile_number: "0305-4433221", class_name: "Grade 4" },
-    { id: 1062, name: "Maryam Sajid", admission_number: "ADM-1062", roll_number: "G4-03", father_name: "Sajid Ali", dob: "2015-02-18", gender: "Female", blood_group: "A-", address: "Garden Town, Lahore", mobile_number: "0312-7766554", class_name: "Grade 4" },
-    { id: 1063, name: "Bilal Usman", admission_number: "ADM-1063", roll_number: "G4-04", father_name: "Muhammad Usman", dob: "2015-09-30", gender: "Male", blood_group: "O+", address: "Askari 10, Lahore", mobile_number: "0345-8899001", class_name: "Grade 4" },
-
-    // Grade 5
-    { id: 1071, name: "Maryam Sajid", admission_number: "ADM-1007", roll_number: "G5-19", father_name: "Sajid Ali", dob: "2014-02-18", gender: "Female", blood_group: "A-", address: "Garden Town, Lahore", mobile_number: "0312-7766554", class_name: "Grade 5" },
-    { id: 1072, name: "Bilal Usman", admission_number: "ADM-1072", roll_number: "G5-02", father_name: "Muhammad Usman", dob: "2014-09-30", gender: "Male", blood_group: "O+", address: "Askari 10, Lahore", mobile_number: "0345-8899001", class_name: "Grade 5" },
-    { id: 1073, name: "Anaya Usman", admission_number: "ADM-1073", roll_number: "G5-03", father_name: "Usman Ghani", dob: "2014-04-14", gender: "Female", blood_group: "AB-", address: "Wapda Town, Lahore", mobile_number: "0323-3344556", class_name: "Grade 5" },
-
-    // Grade 6
-    { id: 1081, name: "Bilal Usman", admission_number: "ADM-1008", roll_number: "G6-11", father_name: "Muhammad Usman", dob: "2013-09-30", gender: "Male", blood_group: "O+", address: "Askari 10, Lahore", mobile_number: "0345-8899001", class_name: "Grade 6" },
-    { id: 1082, name: "Anaya Usman", admission_number: "ADM-1082", roll_number: "G6-02", father_name: "Usman Ghani", dob: "2013-04-14", gender: "Female", blood_group: "AB-", address: "Wapda Town, Lahore", mobile_number: "0323-3344556", class_name: "Grade 6" },
-    { id: 1083, name: "Abdullah Haroon", admission_number: "ADM-1083", roll_number: "G6-03", father_name: "Haroon Rasheed", dob: "2013-01-22", gender: "Male", blood_group: "A+", address: "Valencia Town, Lahore", mobile_number: "0306-6677889", class_name: "Grade 6" },
-
-    // Grade 7
-    { id: 1091, name: "Anaya Usman", admission_number: "ADM-1009", roll_number: "G7-04", father_name: "Usman Ghani", dob: "2012-04-14", gender: "Female", blood_group: "AB-", address: "Wapda Town, Lahore", mobile_number: "0323-3344556", class_name: "Grade 7" },
-    { id: 1092, name: "Abdullah Haroon", admission_number: "ADM-1092", roll_number: "G7-02", father_name: "Haroon Rasheed", dob: "2012-01-22", gender: "Male", blood_group: "A+", address: "Valencia Town, Lahore", mobile_number: "0306-6677889", class_name: "Grade 7" },
-    { id: 1093, name: "Syed Bilal Shah", admission_number: "ADM-1093", roll_number: "G7-03", father_name: "Syed Hassan Shah", dob: "2012-08-20", gender: "Male", blood_group: "O+", address: "DHA Phase 5, Lahore", mobile_number: "0321-9876543", class_name: "Grade 7" },
-
-    // Grade 8
-    { id: 1101, name: "Abdullah Haroon", admission_number: "ADM-1010", roll_number: "G8-20", father_name: "Haroon Rasheed", dob: "2011-01-22", gender: "Male", blood_group: "A+", address: "Valencia Town, Lahore", mobile_number: "0306-6677889", class_name: "Grade 8" },
-    { id: 1102, name: "Muhammad Ahmed", admission_number: "ADM-1102", roll_number: "G8-02", father_name: "Tariq Mahmood", dob: "2011-05-15", gender: "Male", blood_group: "B+", address: "Gulberg 3, Lahore", mobile_number: "0300-1234567", class_name: "Grade 8" },
-    { id: 1103, name: "Zainab Ali", admission_number: "ADM-1103", roll_number: "G8-03", father_name: "Asif Ali", dob: "2011-06-18", gender: "Female", blood_group: "O+", address: "Faisal Town, Lahore", mobile_number: "0300-1112222", class_name: "Grade 8" },
-
-    // Grade 9
-    { id: 1111, name: "Ayaan Khalid Khan", admission_number: "ADM-1005", roll_number: "G9-02", father_name: "Khalid Pervez", dob: "2010-07-12", gender: "Male", blood_group: "B-", address: "Cantt, Lahore", mobile_number: "0305-4433221", class_name: "Grade 9" },
-    { id: 1112, name: "Amna Bilal", admission_number: "ADM-1112", roll_number: "G9-03", father_name: "Bilal Ahmad", dob: "2010-12-10", gender: "Female", blood_group: "A+", address: "Johar Town, Lahore", mobile_number: "0301-5554433", class_name: "Grade 9" },
-    { id: 1113, name: "Fatima Yasir", admission_number: "ADM-1113", roll_number: "G9-04", father_name: "Yasir Mahmood", dob: "2010-09-08", gender: "Female", blood_group: "O+", address: "Garden Town, Lahore", mobile_number: "0300-3334441", class_name: "Grade 9" },
-
-    // Grade 10
-    { id: 1121, name: "Zainab Binte Bilal", admission_number: "ADM-1121", roll_number: "G10-01", father_name: "Bilal Ahmad", dob: "2009-12-10", gender: "Female", blood_group: "A+", address: "Johar Town, Lahore", mobile_number: "0301-5554433", class_name: "Grade 10" },
-    { id: 1122, name: "Hamza Ahmed Malik", admission_number: "ADM-1004", roll_number: "G10-02", father_name: "Tariq Mahmood", dob: "2009-03-25", gender: "Male", blood_group: "AB+", address: "Model Town, Lahore", mobile_number: "0333-1122334", class_name: "Grade 10" },
-    { id: 1123, name: "Ayesha Omer", admission_number: "ADM-1123", roll_number: "G10-03", father_name: "Omer Farooq", dob: "2009-11-05", gender: "Female", blood_group: "O-", address: "Faisal Town, Lahore", mobile_number: "0302-9988776", class_name: "Grade 10" }
+    // Add extra baseline students to make sure Playgroup, Grade 9 and Grade 10 also have students
+    { id: 9911, name: 'Muhammad Ayaan', admission_number: 'ADM-2001', roll_number: 'PG-01', father_name: 'Tariq Mahmood', dob: '2021-04-12', gender: 'Male', blood_group: 'O+', address: 'Johar Town, Lahore', mobile_number: '0300-1112221', class_name: 'Playgroup' },
+    { id: 9912, name: 'Zainab Fatima', admission_number: 'ADM-2002', roll_number: 'PG-02', father_name: 'Asif Ali', dob: '2021-06-18', gender: 'Female', blood_group: 'A+', address: 'Faisal Town, Lahore', mobile_number: '0300-1112222', class_name: 'Playgroup' },
+    { id: 9913, name: 'Ayaan Khalid Khan', admission_number: 'ADM-1011', roll_number: 'G9-02', father_name: 'Khalid Pervez', dob: '2010-07-12', gender: 'Male', blood_group: 'B-', address: 'Cantt, Lahore', mobile_number: '0305-4433221', class_name: 'Grade 9' },
+    { id: 9914, name: 'Amna Bilal', admission_number: 'ADM-1012', roll_number: 'G9-03', father_name: 'Bilal Ahmad', dob: '2010-12-10', gender: 'Female', blood_group: 'A+', address: 'Johar Town, Lahore', mobile_number: '0301-5554433', class_name: 'Grade 9' },
+    { id: 9915, name: 'Hamza Ahmed Malik', admission_number: 'ADM-1013', roll_number: 'G10-02', father_name: 'Tariq Mahmood', dob: '2009-03-25', gender: 'Male', blood_group: 'AB+', address: 'Model Town, Lahore', mobile_number: '0333-1122334', class_name: 'Grade 10' },
+    { id: 9916, name: 'Ayesha Omer', admission_number: 'ADM-1014', roll_number: 'G10-03', father_name: 'Omer Farooq', dob: '2009-11-05', gender: 'Female', blood_group: 'O-', address: 'Faisal Town, Lahore', mobile_number: '0302-9988776', class_name: 'Grade 10' }
   ];
 
   // Distribute DB students who lack class_name
