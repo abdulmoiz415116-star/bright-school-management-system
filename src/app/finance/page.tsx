@@ -5,7 +5,7 @@ export default async function FinancePage() {
   const supabase = await createClient();
   
   // Fetch fees
-  const { data: fees } = await supabase.from('fees').select('*').order('created_at', { ascending: false });
+  const { data: fees } = await supabase.from('fees').select('*').order('id', { ascending: false });
 
   // Fetch students for the dropdown
   const { data: students } = await supabase.from('students').select('id, name').order('name', { ascending: true });
@@ -14,10 +14,10 @@ export default async function FinancePage() {
   const { data: accounts } = await supabase.from('chart_of_accounts').select('*').order('code', { ascending: true });
 
   // Fetch journal entries
-  const { data: journalEntries } = await supabase.from('journal_entries').select('*, chart_of_accounts(name, code, type)').order('entry_date', { ascending: false });
+  const { data: journalEntries } = await supabase.from('journal_entries').select('*, chart_of_accounts(name, code, type)').order('entry_date', { ascending: false }).order('created_at', { ascending: false });
 
   // Fetch payroll
-  const { data: payroll } = await supabase.from('payroll').select('*').order('month_year', { ascending: false });
+  const { data: payroll } = await supabase.from('payroll').select('*').order('id', { ascending: false });
 
   // Fetch teachers for payroll dropdown
   const { data: dbTeachers } = await supabase.from('teachers').select('id, name, salary, employee_id');

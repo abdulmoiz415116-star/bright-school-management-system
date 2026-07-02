@@ -870,7 +870,7 @@ export function FinanceClient({
               <CardContent className="p-0">
                 <Table><TableHeader><TableRow><TableHead className="pl-4">Receipt #</TableHead><TableHead>Student Name</TableHead><TableHead>Amount</TableHead><TableHead className="text-right pr-4">Actions & Vouchers</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {fees.map(f => (
+                  {[...fees].sort((a, b) => Number(b.id) - Number(a.id)).map(f => (
                     <TableRow key={f.id}>
                       <TableCell className="pl-4 font-mono font-bold text-xs text-rose-600">#{f.id}</TableCell>
                       <TableCell className="font-bold">{f.student_name || 'General Income'}</TableCell>
@@ -950,7 +950,7 @@ export function FinanceClient({
               <CardContent className="p-0">
                 <Table><TableHeader><TableRow><TableHead className="pl-4">Employee</TableHead><TableHead>Month</TableHead><TableHead>Net Salary</TableHead><TableHead className="text-right pr-4">Actions & Slips</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {payroll.map(p => (
+                  {[...payroll].sort((a, b) => Number(b.id) - Number(a.id)).map(p => (
                     <TableRow key={p.id}>
                       <TableCell className="pl-4 font-bold">{p.employees?.profiles?.full_name || 'Prof. Muhammad Usman'}</TableCell>
                       <TableCell className="font-semibold text-xs text-muted-foreground">{p.month_year}</TableCell>
@@ -1192,7 +1192,7 @@ export function FinanceClient({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {journal.filter(j => {
+                        {[...journal].sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime()).filter(j => {
                           const accDetails = j.chart_of_accounts || accounts.find(a => a.id === j.account_id || a.code === j.account_id);
                           return accDetails?.type === subTab;
                         }).map(j => {
