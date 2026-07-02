@@ -17,7 +17,7 @@ import { useLocale } from "next-intl";
 // Types
 type Fee = { id: number; amount: number; description: string; student_id?: number; student_name?: string; created_at: string; };
 type Account = { id: string; code: string; name: string; type: string; };
-type Journal = { id: string; account_id: string; amount: number; type: string; description: string; entry_date: string; chart_of_accounts: { name: string; code: string; } };
+type Journal = { id: string; account_id: string; amount: number; type: string; description: string; entry_date: string; chart_of_accounts: { name: string; code: string; type?: string; } };
 type Payroll = { id: string; employee_id: string; month_year: string; basic_salary: number; allowances: number; deductions: number; net_salary: number; status: string; payment_date: string; employees?: { employee_code?: string; profiles?: { full_name?: string; } } };
 
 export function FinanceClient({ 
@@ -83,10 +83,32 @@ export function FinanceClient({
   });
   
   const [fees, setFees] = useState<Fee[]>(initialFees);
-  const [journal, setJournal] = useState<Journal[]>(initialJournal);
   const [payroll, setPayroll] = useState<Payroll[]>(initialPayroll);
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
+
+  const [accounts, setAccounts] = useState<Account[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("bs_chart_of_accounts_v1");
+      if (saved) return JSON.parse(saved);
+    }
+    return initialAccounts;
+  });
+
+  const [journal, setJournal] = useState<Journal[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("bs_journal_entries_v1");
+      if (saved) return JSON.parse(saved);
+    }
+    return initialJournal;
+  });
+
+  // Ledger Category Subtab
+  const [subTab, setSubTab] = useState<'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense'>('Asset');
+
+  // Form states for creating new accounts
+  const [newAccountCode, setNewAccountCode] = useState("");
+  const [newAccountName, setNewAccountName] = useState("");
 
   // Active Modals state
   const [challanFee, setChallanFee] = useState<Fee | null>(null);
@@ -114,11 +136,57 @@ export function FinanceClient({
   const [allowances, setAllowances] = useState("0");
   const [deductions, setDeductions] = useState("0");
 
+  // Sync initial props
   useEffect(() => {
     setFees(initialFees);
-    setJournal(initialJournal);
     setPayroll(initialPayroll);
-  }, [initialFees, initialJournal, initialPayroll]);
+    if (typeof window !== "undefined" && !localStorage.getItem("bs_chart_of_accounts_v1")) {
+      setAccounts(initialAccounts);
+    }
+    if (typeof window !== "undefined" && !localStorage.getItem("bs_journal_entries_v1")) {
+      setJournal(initialJournal);
+    }
+  }, [initialFees, initialPayroll, initialAccounts, initialJournal]);
+
+  // Sync data from database on mount if tables exist
+  useEffect(() => {
+    async function syncData() {
+      // 1. Sync Accounts
+      const { data: dbAccounts, error: accError } = await supabase
+        .from('chart_of_accounts')
+        .select('*')
+        .order('code', { ascending: true });
+      if (!accError && dbAccounts && dbAccounts.length > 0) {
+        setAccounts(dbAccounts);
+        localStorage.setItem("bs_chart_of_accounts_v1", JSON.stringify(dbAccounts));
+      }
+
+      // 2. Sync Journal
+      const { data: dbJournal, error: jError } = await supabase
+        .from('journal_entries')
+        .select('*, chart_of_accounts(name, code, type)')
+        .order('entry_date', { ascending: false });
+      if (!jError && dbJournal && dbJournal.length > 0) {
+        setJournal(dbJournal as unknown as Journal[]);
+        localStorage.setItem("bs_journal_entries_v1", JSON.stringify(dbJournal));
+      }
+    }
+    syncData();
+  }, [supabase]);
+
+  // Broadcast Channel Cross-Tab Sync
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const bc = new BroadcastChannel("finance_local_sync");
+    bc.onmessage = (event) => {
+      if (event.data.type === "SYNC_ACCOUNTS") {
+        setAccounts(event.data.data);
+      } else if (event.data.type === "SYNC_JOURNAL") {
+        setJournal(event.data.data);
+      }
+    };
+    return () => { bc.close(); };
+  }, []);
 
   useEffect(() => {
     // Realtime subscriptions
@@ -132,13 +200,47 @@ export function FinanceClient({
           setFees((prev) => prev.filter(f => f.id !== payload.old.id));
         }
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chart_of_accounts' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setAccounts((prev) => {
+            const updated = prev.find(a => a.id === payload.new.id) ? prev : [...prev, payload.new as Account];
+            localStorage.setItem("bs_chart_of_accounts_v1", JSON.stringify(updated));
+            return updated;
+          });
+        } else if (payload.eventType === 'UPDATE') {
+          setAccounts((prev) => {
+            const updated = prev.map(a => a.id === payload.new.id ? payload.new as Account : a);
+            localStorage.setItem("bs_chart_of_accounts_v1", JSON.stringify(updated));
+            return updated;
+          });
+        } else if (payload.eventType === 'DELETE') {
+          setAccounts((prev) => {
+            const updated = prev.filter(a => a.id !== payload.old.id);
+            localStorage.setItem("bs_chart_of_accounts_v1", JSON.stringify(updated));
+            return updated;
+          });
+        }
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_entries' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          setJournal((prev) => prev.find(j => j.id === payload.new.id) ? prev : [payload.new as unknown as Journal, ...prev]);
+          setJournal((prev) => {
+            if (prev.find(j => j.id === payload.new.id)) return prev;
+            const updated = [payload.new as unknown as Journal, ...prev];
+            localStorage.setItem("bs_journal_entries_v1", JSON.stringify(updated));
+            return updated;
+          });
         } else if (payload.eventType === 'UPDATE') {
-          setJournal((prev) => prev.map(j => j.id === payload.new.id ? payload.new as unknown as Journal : j));
+          setJournal((prev) => {
+            const updated = prev.map(j => j.id === payload.new.id ? payload.new as unknown as Journal : j);
+            localStorage.setItem("bs_journal_entries_v1", JSON.stringify(updated));
+            return updated;
+          });
         } else if (payload.eventType === 'DELETE') {
-          setJournal((prev) => prev.filter(j => j.id !== payload.old.id));
+          setJournal((prev) => {
+            const updated = prev.filter(j => j.id !== payload.old.id);
+            localStorage.setItem("bs_journal_entries_v1", JSON.stringify(updated));
+            return updated;
+          });
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll' }, (payload) => {
@@ -181,30 +283,135 @@ export function FinanceClient({
     await supabase.from('fees').delete().eq('id', id);
   };
 
+  const handleAddAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAccountCode || !newAccountName) return;
+    setLoading(true);
+
+    const newAcc: Account = {
+      id: "acc_local_" + Date.now(),
+      code: newAccountCode,
+      name: newAccountName,
+      type: subTab
+    };
+
+    setAccounts(prev => {
+      const updated = [...prev, newAcc];
+      localStorage.setItem("bs_chart_of_accounts_v1", JSON.stringify(updated));
+      return updated;
+    });
+
+    await supabase.from('chart_of_accounts').insert([{
+      code: newAccountCode,
+      name: newAccountName,
+      type: subTab
+    }]);
+
+    if (typeof window !== "undefined") {
+      const bc = new BroadcastChannel("finance_local_sync");
+      bc.postMessage({ type: "SYNC_ACCOUNTS", data: [...accounts, newAcc] });
+      bc.close();
+    }
+
+    setNewAccountCode("");
+    setNewAccountName("");
+    setLoading(false);
+  };
+
   const handleAddJournal = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true);
-    const acc = initialAccounts.find(a => a.id === accountId);
-    if (!acc) return;
+    e.preventDefault();
+    setLoading(true);
+    const acc = accounts.find(a => a.id === accountId);
+    if (!acc) { setLoading(false); return; }
 
-    const payload = { id: Date.now().toString(), account_id: accountId, amount: parseInt(journalAmount), type: journalType, description: journalDesc, entry_date: new Date().toISOString(), chart_of_accounts: { name: acc.name, code: acc.code } };
-    setJournal(prev => [payload as unknown as Journal, ...prev]);
+    const entryId = "j_local_" + Date.now();
+    const entryDate = new Date().toISOString();
+    const payload: Journal = {
+      id: entryId,
+      account_id: accountId,
+      amount: parseInt(journalAmount),
+      type: journalType,
+      description: journalDesc,
+      entry_date: entryDate,
+      chart_of_accounts: { name: acc.name, code: acc.code, type: acc.type }
+    };
 
-    await supabase.from('journal_entries').insert([{ account_id: accountId, amount: parseInt(journalAmount), type: journalType, description: journalDesc, entry_date: new Date().toISOString() }]);
-    setJournalAmount(""); setJournalDesc(""); setLoading(false);
+    setJournal(prev => {
+      const updated = [payload, ...prev];
+      localStorage.setItem("bs_journal_entries_v1", JSON.stringify(updated));
+      return updated;
+    });
+
+    const dbPayload: any = { amount: parseInt(journalAmount), type: journalType, description: journalDesc, entry_date: entryDate.split('T')[0] };
+    
+    if (accountId.includes('-') || accountId.length > 15) {
+      dbPayload.account_id = accountId;
+    } else {
+      const { data: dbAcc } = await supabase.from('chart_of_accounts').select('id').eq('code', acc.code).single();
+      if (dbAcc) {
+        dbPayload.account_id = dbAcc.id;
+      } else {
+        const { data: newDbAcc } = await supabase.from('chart_of_accounts').insert([{ code: acc.code, name: acc.name, type: acc.type }]).select('id').single();
+        if (newDbAcc) {
+          dbPayload.account_id = newDbAcc.id;
+        }
+      }
+    }
+
+    if (dbPayload.account_id) {
+      await supabase.from('journal_entries').insert([dbPayload]);
+    }
+
+    if (typeof window !== "undefined") {
+      const bc = new BroadcastChannel("finance_local_sync");
+      bc.postMessage({ type: "SYNC_JOURNAL", data: [payload, ...journal] });
+      bc.close();
+    }
+
+    setJournalAmount("");
+    setJournalDesc("");
+    setLoading(false);
   };
 
   const handleSaveEditJournal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingJournal) return;
-    setJournal(prev => prev.map(j => j.id === editingJournal.id ? editingJournal : j));
+    
+    setJournal(prev => {
+      const updated = prev.map(j => j.id === editingJournal.id ? editingJournal : j);
+      localStorage.setItem("bs_journal_entries_v1", JSON.stringify(updated));
+      return updated;
+    });
+
     await supabase.from('journal_entries').update({ amount: editingJournal.amount, description: editingJournal.description, type: editingJournal.type }).eq('id', editingJournal.id);
+    
+    if (typeof window !== "undefined") {
+      const bc = new BroadcastChannel("finance_local_sync");
+      bc.postMessage({ type: "SYNC_JOURNAL", data: journal.map(j => j.id === editingJournal.id ? editingJournal : j) });
+      bc.close();
+    }
+
     setEditingJournal(null);
   };
 
   const handleDeleteJournal = async (id: string) => {
     if (!confirm(isUrdu ? "کیا آپ واقعی اس اینٹری کو حذف کرنا چاہتے ہیں؟" : "Are you sure you want to delete this journal entry?")) return;
-    setJournal(journal.filter(j => j.id !== id));
-    await supabase.from('journal_entries').delete().eq('id', id);
+    
+    setJournal(prev => {
+      const updated = prev.filter(j => j.id !== id);
+      localStorage.setItem("bs_journal_entries_v1", JSON.stringify(updated));
+      return updated;
+    });
+
+    if (id.includes('-') || id.length > 15) {
+      await supabase.from('journal_entries').delete().eq('id', id);
+    }
+
+    if (typeof window !== "undefined") {
+      const bc = new BroadcastChannel("finance_local_sync");
+      bc.postMessage({ type: "SYNC_JOURNAL", data: journal.filter(j => j.id !== id) });
+      bc.close();
+    }
   };
 
   const handleAddPayroll = async (e: React.FormEvent) => {
@@ -251,6 +458,60 @@ export function FinanceClient({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // Helper to calculate total balances for all 5 categories
+  const calculateBalances = () => {
+    let assets = 0;
+    let liabilities = 0;
+    let equity = 0;
+    let revenue = 0;
+    let expenses = 0;
+
+    journal.forEach(j => {
+      const accDetails = j.chart_of_accounts || accounts.find(a => a.id === j.account_id || a.code === j.account_id);
+      if (!accDetails) return;
+
+      const type = accDetails.type;
+      const amt = Number(j.amount || 0);
+
+      if (type === 'Asset') {
+        if (j.type === 'Debit') assets += amt;
+        else assets -= amt;
+      } else if (type === 'Liability') {
+        if (j.type === 'Credit') liabilities += amt;
+        else liabilities -= amt;
+      } else if (type === 'Equity') {
+        if (j.type === 'Credit') equity += amt;
+        else equity -= amt;
+      } else if (type === 'Revenue') {
+        if (j.type === 'Credit') revenue += amt;
+        else revenue -= amt;
+      } else if (type === 'Expense') {
+        if (j.type === 'Debit') expenses += amt;
+        else expenses -= amt;
+      }
+    });
+
+    return { assets, liabilities, equity, revenue, expenses };
+  };
+
+  const { assets, liabilities, equity, revenue, expenses } = calculateBalances();
+
+  // Helper to calculate balance of a specific account
+  const getAccountBalance = (accId: string, accType: string) => {
+    let bal = 0;
+    journal.filter(j => j.account_id === accId).forEach(j => {
+      const amt = Number(j.amount || 0);
+      if (accType === 'Asset' || accType === 'Expense') {
+        if (j.type === 'Debit') bal += amt;
+        else bal -= amt;
+      } else {
+        if (j.type === 'Credit') bal += amt;
+        else bal -= amt;
+      }
+    });
+    return bal;
   };
 
   return (
@@ -653,47 +914,240 @@ export function FinanceClient({
         )}
 
         {activeTab === 'ledger' && (
-          <div className="grid gap-8 lg:grid-cols-3 animate-in fade-in duration-300">
-            <Card className="lg:col-span-1 border-border shadow-sm bg-card h-fit">
-              <CardHeader className="bg-muted/50 border-b border-border"><CardTitle>Journal Entry</CardTitle></CardHeader>
-              <CardContent className="pt-6">
-                <form onSubmit={handleAddJournal} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Account</Label>
-                    <select required className="flex h-10 w-full rounded-md border border-input bg-background px-3" onChange={e => setAccountId(e.target.value)}>
-                      <option value="">Select Account...</option>
-                      {initialAccounts.map(a => <option key={a.id} value={a.id}>{a.code} - {a.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2"><Label>Type</Label><select className="flex h-10 w-full rounded-md border border-input bg-background px-3" value={journalType} onChange={e => setJournalType(e.target.value)}><option value="Debit">Debit</option><option value="Credit">Credit</option></select></div>
-                  <div className="space-y-2"><Label>Amount (Rs.)</Label><Input type="number" required value={journalAmount} onChange={e => setJournalAmount(e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Description</Label><Input required value={journalDesc} onChange={e => setJournalDesc(e.target.value)} /></div>
-                  <Button type="submit" className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold" disabled={loading}>{loading ? <Loader2 className="animate-spin" /> : "Post Entry"}</Button>
-                </form>
-              </CardContent>
-            </Card>
-            <Card className="lg:col-span-2 border-border shadow-sm bg-card h-fit overflow-hidden">
-              <CardHeader className="bg-muted/50 border-b border-border"><CardTitle>General Ledger Entries</CardTitle></CardHeader>
-              <CardContent className="p-0">
-                <Table><TableHeader><TableRow><TableHead className="pl-4">Account</TableHead><TableHead>Type</TableHead><TableHead>Amount</TableHead><TableHead className="text-right pr-4">Actions</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {journal.map(j => (
-                    <TableRow key={j.id}>
-                      <TableCell className="pl-4 font-bold">{j.chart_of_accounts?.name || 'Account'}</TableCell>
-                      <TableCell><Badge variant="outline">{j.type}</Badge></TableCell>
-                      <TableCell className="font-bold">Rs. {j.amount}</TableCell>
-                      <TableCell className="text-right pr-4">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button variant="destructive" size="sm" className="h-8 px-2 rounded-xl" onClick={() => handleDeleteJournal(j.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody></Table>
-              </CardContent>
-            </Card>
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* 1. Summary Cards Grid */}
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-5 print:hidden">
+              <Card className="bg-emerald-500/[0.02] border-emerald-500/20 dark:border-emerald-500/10">
+                <CardContent className="p-4 flex flex-col justify-between h-24">
+                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-wider">{isUrdu ? "اثاثے (Assets)" : "Total Assets"}</p>
+                  <h3 className="text-xl font-black text-emerald-600 dark:text-emerald-400 truncate">Rs. {assets.toLocaleString()}</h3>
+                </CardContent>
+              </Card>
+              <Card className="bg-rose-500/[0.02] border-rose-500/20 dark:border-rose-500/10">
+                <CardContent className="p-4 flex flex-col justify-between h-24">
+                  <p className="text-[10px] text-rose-600 dark:text-rose-400 font-black uppercase tracking-wider">{isUrdu ? "واجبات (Liabilities)" : "Total Liabilities"}</p>
+                  <h3 className="text-xl font-black text-rose-600 dark:text-rose-400 truncate">Rs. {liabilities.toLocaleString()}</h3>
+                </CardContent>
+              </Card>
+              <Card className="bg-blue-500/[0.02] border-blue-500/20 dark:border-blue-500/10">
+                <CardContent className="p-4 flex flex-col justify-between h-24">
+                  <p className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-wider">{isUrdu ? "سرمایہ (Equity)" : "Total Equity"}</p>
+                  <h3 className="text-xl font-black text-blue-600 dark:text-blue-400 truncate">Rs. {equity.toLocaleString()}</h3>
+                </CardContent>
+              </Card>
+              <Card className="bg-amber-500/[0.02] border-amber-500/20 dark:border-amber-500/10">
+                <CardContent className="p-4 flex flex-col justify-between h-24">
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-wider">{isUrdu ? "ریونیو / آمدنی (Income)" : "Total Revenue"}</p>
+                  <h3 className="text-xl font-black text-amber-600 dark:text-amber-400 truncate">Rs. {revenue.toLocaleString()}</h3>
+                </CardContent>
+              </Card>
+              <Card className="bg-orange-500/[0.02] border-orange-500/20 dark:border-orange-500/10">
+                <CardContent className="p-4 flex flex-col justify-between h-24">
+                  <p className="text-[10px] text-orange-600 dark:text-orange-400 font-black uppercase tracking-wider">{isUrdu ? "اخراجات (Expenses)" : "Total Expenses"}</p>
+                  <h3 className="text-xl font-black text-orange-600 dark:text-orange-400 truncate">Rs. {expenses.toLocaleString()}</h3>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* 2. Subtabs for 5 Categories */}
+            <div className="bg-muted p-1 rounded-2xl flex border print:hidden overflow-x-auto gap-1">
+              {(['Asset', 'Liability', 'Equity', 'Revenue', 'Expense'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => { setSubTab(tab); setAccountId(""); }}
+                  className={`flex-1 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${
+                    subTab === tab ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {tab === 'Asset' && (isUrdu ? 'ایسٹس (Assets)' : 'Assets')}
+                  {tab === 'Liability' && (isUrdu ? 'لائبلٹیز (Liabilities)' : 'Liabilities')}
+                  {tab === 'Equity' && (isUrdu ? 'ایکویٹی (Equity)' : 'Equity')}
+                  {tab === 'Revenue' && (isUrdu ? 'ریونیو (Revenue)' : 'Income / Revenue')}
+                  {tab === 'Expense' && (isUrdu ? 'اخراجات (Expenses)' : 'Expenses')}
+                </button>
+              ))}
+            </div>
+
+            {/* 3. Grid for Accounts & Transactions */}
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Left Column: Forms */}
+              <div className="lg:col-span-1 space-y-6">
+                {/* Add Account Card */}
+                <Card className="border-border shadow-sm bg-card h-fit">
+                  <CardHeader className="bg-muted/50 border-b border-border py-3 px-4">
+                    <CardTitle className="text-sm font-extrabold flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-rose-600" />
+                      {isUrdu ? `${subTab} کھاتہ شامل کریں` : `Add ${subTab} Account`}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4 px-4 pb-4">
+                    <form onSubmit={handleAddAccount} className="space-y-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">{isUrdu ? 'کھاتہ کوڈ (Code)' : 'Account Code'}</Label>
+                        <Input required placeholder="e.g. 1006" value={newAccountCode} onChange={e => setNewAccountCode(e.target.value)} className="h-9 text-xs" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{isUrdu ? 'کھاتہ کا نام (Name)' : 'Account Name'}</Label>
+                        <Input required placeholder="e.g. Office Furniture" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} className="h-9 text-xs" />
+                      </div>
+                      <Button type="submit" className="w-full h-9 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold" disabled={loading}>
+                        {isUrdu ? 'نیا کھاتہ بنائیں' : 'Create Account'}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* Post Transaction Card */}
+                <Card className="border-border shadow-sm bg-card h-fit">
+                  <CardHeader className="bg-muted/50 border-b border-border py-3 px-4">
+                    <CardTitle className="text-sm font-extrabold flex items-center gap-2">
+                      <Receipt className="w-4 h-4 text-rose-600" />
+                      {isUrdu ? 'ٹرانزیکشن پوسٹ کریں' : 'Post Journal Entry'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4 px-4 pb-4">
+                    <form onSubmit={handleAddJournal} className="space-y-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">{isUrdu ? 'کھاتہ منتخب کریں' : 'Select Account'}</Label>
+                        <select required className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-xs" value={accountId} onChange={e => setAccountId(e.target.value)}>
+                          <option value="">{isUrdu ? 'منتخب کریں...' : 'Select Account...'}</option>
+                          {accounts.filter(a => a.type === subTab).map(a => (
+                            <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{isUrdu ? 'ٹائپ (Debit/Credit)' : 'Entry Type'}</Label>
+                        <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-xs" value={journalType} onChange={e => setJournalType(e.target.value)}>
+                          <option value="Debit">Debit (+)</option>
+                          <option value="Credit">Credit (-)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{isUrdu ? 'رقم (Rs.)' : 'Amount (Rs.)'}</Label>
+                        <Input type="number" required placeholder="Amount" value={journalAmount} onChange={e => setJournalAmount(e.target.value)} className="h-9 text-xs" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{isUrdu ? 'تفصیل' : 'Description'}</Label>
+                        <Input required placeholder="Transaction description" value={journalDesc} onChange={e => setJournalDesc(e.target.value)} className="h-9 text-xs" />
+                      </div>
+                      <Button type="submit" className="w-full h-9 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold" disabled={loading}>
+                        {isUrdu ? 'اینٹری پوسٹ کریں' : 'Post Transaction'}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Column: Tables */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Accounts & Balances Table */}
+                <Card className="border-border shadow-sm bg-card overflow-hidden">
+                  <CardHeader className="bg-muted/50 border-b border-border py-3 px-4">
+                    <CardTitle className="text-sm font-extrabold">
+                      {isUrdu ? `${subTab} کھاتوں کی تفصیل اور بیلنس` : `${subTab} Chart of Accounts & Balances`}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
+                        <TableRow>
+                          <TableHead className="pl-4 text-xs font-bold">{isUrdu ? 'کوڈ' : 'Code'}</TableHead>
+                          <TableHead className="text-xs font-bold">{isUrdu ? 'کھاتہ کا نام' : 'Account Name'}</TableHead>
+                          <TableHead className="text-right pr-4 text-xs font-bold">{isUrdu ? 'موجودہ بیلنس' : 'Current Balance'}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {accounts.filter(a => a.type === subTab).map(a => {
+                          const bal = getAccountBalance(a.id, a.type);
+                          return (
+                            <TableRow key={a.id} className="text-xs">
+                              <TableCell className="pl-4 font-mono font-bold text-slate-500">{a.code}</TableCell>
+                              <TableCell className="font-bold">{a.name}</TableCell>
+                              <TableCell className="text-right pr-4 font-mono font-black text-emerald-600">
+                                Rs. {bal.toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        {accounts.filter(a => a.type === subTab).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center py-4 text-xs text-muted-foreground italic">
+                              {isUrdu ? 'کوئی کھاتہ موجود نہیں ہے۔' : 'No accounts found.'}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Ledger Entries List */}
+                <Card className="border-border shadow-sm bg-card overflow-hidden">
+                  <CardHeader className="bg-muted/50 border-b border-border py-3 px-4 flex flex-row items-center justify-between">
+                    <CardTitle className="text-sm font-extrabold">
+                      {isUrdu ? `${subTab} لیجر ٹرانزیکشن لاگز` : `${subTab} Ledger Transactions`}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader className="bg-muted/30">
+                        <TableRow>
+                          <TableHead className="pl-4 text-xs font-bold">{isUrdu ? 'تاریخ' : 'Date'}</TableHead>
+                          <TableHead className="text-xs font-bold">{isUrdu ? 'تفصیل / کھاتہ' : 'Details / Account'}</TableHead>
+                          <TableHead className="text-center text-xs font-bold">{isUrdu ? 'ڈیبٹ (+)' : 'Debit'}</TableHead>
+                          <TableHead className="text-center text-xs font-bold">{isUrdu ? 'کریڈٹ (-)' : 'Credit'}</TableHead>
+                          <TableHead className="text-right pr-4 text-xs font-bold"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {journal.filter(j => {
+                          const accDetails = j.chart_of_accounts || accounts.find(a => a.id === j.account_id || a.code === j.account_id);
+                          return accDetails?.type === subTab;
+                        }).map(j => {
+                          const accDetails = j.chart_of_accounts || accounts.find(a => a.id === j.account_id || a.code === j.account_id);
+                          const isDebit = j.type === 'Debit';
+                          return (
+                            <TableRow key={j.id} className="text-xs">
+                              <TableCell className="pl-4 font-mono text-slate-500 font-bold whitespace-nowrap">
+                                {j.entry_date?.split('T')[0]}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="font-bold text-slate-900 dark:text-slate-200">{accDetails?.name || 'Account'}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate max-w-[150px]">{j.description}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center font-mono font-bold text-emerald-600">
+                                {isDebit ? `Rs. ${Number(j.amount).toLocaleString()}` : '-'}
+                              </TableCell>
+                              <TableCell className="text-center font-mono font-bold text-rose-600">
+                                {!isDebit ? `Rs. ${Number(j.amount).toLocaleString()}` : '-'}
+                              </TableCell>
+                              <TableCell className="text-right pr-4">
+                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleDeleteJournal(j.id)}>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }).slice(0, 50)}
+                        {journal.filter(j => {
+                          const accDetails = j.chart_of_accounts || accounts.find(a => a.id === j.account_id || a.code === j.account_id);
+                          return accDetails?.type === subTab;
+                        }).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-4 text-xs text-muted-foreground italic">
+                              {isUrdu ? 'کوئی ٹرانزیکشن موجود نہیں ہے۔' : 'No transactions found.'}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
         )}
 
