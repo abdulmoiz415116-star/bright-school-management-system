@@ -142,6 +142,33 @@ export function FinanceClient({
   const [allowances, setAllowances] = useState("0");
   const [deductions, setDeductions] = useState("0");
 
+  // New Adv Finance states
+  const [selectedCashbookAccount, setSelectedCashbookAccount] = useState("all");
+  const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isAddAccountModalOpen, setIsAddAccountModalOpen] = useState(false);
+
+  // Journal Voucher Modal form state
+  const [jeDate, setJeDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [jeDescription, setJeDescription] = useState("");
+  const [jeLines, setJeLines] = useState<Array<{ accountId: string; debit: string; credit: string; memo: string; }>>([
+    { accountId: "", debit: "", credit: "", memo: "" },
+    { accountId: "", debit: "", credit: "", memo: "" }
+  ]);
+
+  // Payment Voucher Modal form state
+  const [payFromAccount, setPayFromAccount] = useState("");
+  const [payToAccount, setPayToAccount] = useState("");
+  const [payAmount, setPayAmount] = useState("");
+  const [payDesc, setPayDesc] = useState("");
+  const [payDate, setPayDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+  // Add Bank Account Form state
+  const [bankAccCode, setBankAccCode] = useState("");
+  const [bankAccName, setBankAccName] = useState("");
+
+  const [viewingVoucher, setViewingVoucher] = useState<JournalGroup | null>(null);
+
   // Sync initial props
   useEffect(() => {
     setFees(initialFees);
@@ -451,6 +478,343 @@ export function FinanceClient({
     setLoading(false);
   };
 
+  // ── Advanced Finance Handlers ────────────────────────────────
+  const handlePostMultiLineJournal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+
+    let totalDebit = 0;
+    let totalCredit = 0;
+    const linesToPost = jeLines.filter(l => l.accountId && (parseFloat(l.debit) > 0 || parseFloat(l.credit) > 0));
+    
+    if (linesToPost.length < 2) {
+      alert(isUrdu ? "کم از کم 2 اکاؤنٹس منتخب کرنا لازمی ہے۔" : "Must allocate at least 2 account lines.");
+      return;
+    }
+
+    linesToPost.forEach(line => {
+      totalDebit += parseFloat(line.debit) || 0;
+      totalCredit += parseFloat(line.credit) || 0;
+    });
+
+    if (Math.abs(totalDebit - totalCredit) > 0.01 || totalDebit === 0) {
+      alert(isUrdu ? "ڈیبٹ اور کریڈٹ برابر اور صفر سے زیادہ ہونے چاہئیں۔" : "Debits and Credits must balance and be greater than zero.");
+      return;
+    }
+
+    setLoading(true);
+
+    const voucherNo = `JE-${Math.floor(100000 + Math.random() * 900000)}`;
+    const postingDate = jeDate || new Date().toISOString().split('T')[0];
+    const fullNarrative = `[${voucherNo}] ${jeDescription}`;
+
+    const newRowsToSave: any[] = [];
+    const localJournalEntries: Journal[] = [];
+
+    for (const line of linesToPost) {
+      const acc = accounts.find(a => a.id === line.accountId || a.code === line.accountId);
+      if (!acc) continue;
+
+      const amt = parseFloat(line.debit) > 0 ? parseFloat(line.debit) : parseFloat(line.credit);
+      const entryType = parseFloat(line.debit) > 0 ? 'Debit' : 'Credit';
+      const lineMemo = line.memo ? ` (${line.memo})` : '';
+
+      const localId = "j_multi_" + Math.random().toString(36).substring(2, 9);
+      const localEntry: Journal = {
+        id: localId,
+        account_id: acc.id,
+        amount: amt,
+        type: entryType,
+        description: `${fullNarrative}${lineMemo}`,
+        entry_date: postingDate,
+        chart_of_accounts: { name: acc.name, code: acc.code, type: acc.type }
+      };
+
+      localJournalEntries.push(localEntry);
+      newRowsToSave.push({
+        account_id: acc.id,
+        amount: amt,
+        type: entryType,
+        description: `${fullNarrative}${lineMemo}`,
+        entry_date: postingDate
+      });
+    }
+
+    setJournal(prev => {
+      const updated = [...localJournalEntries, ...prev];
+      localStorage.setItem("bs_journal_entries_v1", JSON.stringify(updated));
+      return updated;
+    });
+
+    const { error } = await supabase.from('journal_entries').insert(newRowsToSave);
+    if (error) {
+      console.error("Error inserting journal entries:", error);
+    }
+
+    if (typeof window !== "undefined") {
+      const bc = new BroadcastChannel("finance_local_sync");
+      bc.postMessage({ type: "SYNC_JOURNAL", data: [...localJournalEntries, ...journal] });
+      bc.close();
+    }
+
+    setJeDescription("");
+    setJeLines([
+      { accountId: "", debit: "", credit: "", memo: "" },
+      { accountId: "", debit: "", credit: "", memo: "" }
+    ]);
+    setIsJournalModalOpen(false);
+    setLoading(false);
+  };
+
+  const handlePostPaymentVoucher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+
+    if (!payFromAccount || !payToAccount || !payAmount || !payDesc) {
+      alert(isUrdu ? "براہ کرم تمام معلومات درج کریں۔" : "Please fill in all fields.");
+      return;
+    }
+
+    setLoading(true);
+
+    const fromAcc = accounts.find(a => a.id === payFromAccount || a.code === payFromAccount);
+    const toAcc = accounts.find(a => a.id === payToAccount || a.code === payToAccount);
+
+    if (!fromAcc || !toAcc) {
+      setLoading(false);
+      return;
+    }
+
+    const amt = parseFloat(payAmount);
+    const voucherNo = `PV-${Math.floor(100000 + Math.random() * 900000)}`;
+    const postingDate = payDate || new Date().toISOString().split('T')[0];
+    const baseNarrative = `[${voucherNo}] ${payDesc}`;
+
+    const row1LocalId = "j_pv1_" + Math.random().toString(36).substring(2, 9);
+    const row2LocalId = "j_pv2_" + Math.random().toString(36).substring(2, 9);
+
+    const localEntry1: Journal = {
+      id: row1LocalId,
+      account_id: toAcc.id,
+      amount: amt,
+      type: 'Debit',
+      description: baseNarrative,
+      entry_date: postingDate,
+      chart_of_accounts: { name: toAcc.name, code: toAcc.code, type: toAcc.type }
+    };
+
+    const localEntry2: Journal = {
+      id: row2LocalId,
+      account_id: fromAcc.id,
+      amount: amt,
+      type: 'Credit',
+      description: baseNarrative,
+      entry_date: postingDate,
+      chart_of_accounts: { name: fromAcc.name, code: fromAcc.code, type: fromAcc.type }
+    };
+
+    const localEntries = [localEntry1, localEntry2];
+
+    setJournal(prev => {
+      const updated = [...localEntries, ...prev];
+      localStorage.setItem("bs_journal_entries_v1", JSON.stringify(updated));
+      return updated;
+    });
+
+    const dbPayload = [
+      { account_id: toAcc.id, amount: amt, type: 'Debit', description: baseNarrative, entry_date: postingDate },
+      { account_id: fromAcc.id, amount: amt, type: 'Credit', description: baseNarrative, entry_date: postingDate }
+    ];
+
+    await supabase.from('journal_entries').insert(dbPayload);
+
+    if (typeof window !== "undefined") {
+      const bc = new BroadcastChannel("finance_local_sync");
+      bc.postMessage({ type: "SYNC_JOURNAL", data: [...localEntries, ...journal] });
+      bc.close();
+    }
+
+    setPayAmount("");
+    setPayDesc("");
+    setIsPaymentModalOpen(false);
+    setLoading(false);
+  };
+
+  const handleCreateBankAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bankAccCode || !bankAccName) return;
+
+    setLoading(true);
+
+    const newAcc: Account = {
+      id: "acc_bank_" + Date.now(),
+      code: bankAccCode,
+      name: bankAccName,
+      type: 'Asset'
+    };
+
+    setAccounts(prev => {
+      const updated = [...prev, newAcc];
+      localStorage.setItem("bs_chart_of_accounts_v1", JSON.stringify(updated));
+      return updated;
+    });
+
+    await supabase.from('chart_of_accounts').insert([{
+      code: bankAccCode,
+      name: bankAccName,
+      type: 'Asset'
+    }]);
+
+    if (typeof window !== "undefined") {
+      const bc = new BroadcastChannel("finance_local_sync");
+      bc.postMessage({ type: "SYNC_ACCOUNTS", data: [...accounts, newAcc] });
+      bc.close();
+    }
+
+    setBankAccCode("");
+    setBankAccName("");
+    setIsAddAccountModalOpen(false);
+    setLoading(false);
+  };
+
+  // Grouped journals helper for display list
+  const getGroupedJournalEntries = () => {
+    const groups: { [key: string]: JournalGroup } = {};
+    
+    journal.forEach(j => {
+      const desc = j.description || '';
+      const match = desc.match(/^\[([A-Z0-9\-]+)\]\s*(.*)$/);
+      const acc = j.chart_of_accounts || accounts.find(a => a.id === j.account_id || a.code === j.account_id);
+      
+      if (match) {
+        const voucherNo = match[1];
+        const narrative = match[2];
+        
+        if (!groups[voucherNo]) {
+          groups[voucherNo] = {
+            id: voucherNo,
+            entryNo: voucherNo,
+            entry_date: j.entry_date,
+            description: narrative,
+            lines: []
+          };
+        }
+        
+        groups[voucherNo].lines.push({
+          id: j.id,
+          account_id: j.account_id,
+          account_name: acc?.name || 'Unknown Account',
+          account_code: acc?.code || '',
+          type: j.type as 'Debit' | 'Credit',
+          amount: Number(j.amount),
+          description: j.description
+        });
+      } else {
+        const voucherNo = `VOU-${j.id.substring(0, 8)}`;
+        groups[voucherNo] = {
+          id: j.id,
+          entryNo: voucherNo,
+          entry_date: j.entry_date,
+          description: desc,
+          lines: [{
+            id: j.id,
+            account_id: j.account_id,
+            account_name: acc?.name || 'Unknown Account',
+            account_code: acc?.code || '',
+            type: j.type as 'Debit' | 'Credit',
+            amount: Number(j.amount),
+            description: desc
+          }]
+        };
+      }
+    });
+    
+    return Object.values(groups).sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime());
+  };
+
+  type JournalGroup = {
+    id: string;
+    entryNo: string;
+    entry_date: string;
+    description: string;
+    lines: Array<{
+      id: string;
+      account_id: string;
+      account_name: string;
+      account_code: string;
+      type: 'Debit' | 'Credit';
+      amount: number;
+      description: string;
+    }>;
+  };
+
+  const getCashbookTransactions = () => {
+    const list: any[] = [];
+    
+    // 1. Journal entries affecting Cash & Banks
+    journal.forEach(j => {
+      const acc = accounts.find(a => a.id === j.account_id || a.code === j.account_id);
+      if (!acc || acc.type !== 'Asset') return;
+      const isCashOrBank = acc.name.toLowerCase().includes('cash') || acc.name.toLowerCase().includes('bank') || acc.name.toLowerCase().includes('mcb') || acc.name.toLowerCase().includes('meezan');
+      if (!isCashOrBank) return;
+      
+      if (selectedCashbookAccount !== 'all' && acc.id !== selectedCashbookAccount) return;
+      
+      const desc = j.description || '';
+      const match = desc.match(/^\[([A-Z0-9\-]+)\]\s*(.*)$/);
+      const entryNo = match ? match[1] : `JE-${j.id.substring(0, 5)}`;
+      const narrative = match ? match[2] : desc;
+      
+      list.push({
+        id: j.id,
+        date: j.entry_date,
+        entryNo: entryNo,
+        description: narrative,
+        account_name: acc.name,
+        debit: j.type === 'Debit' ? Number(j.amount) : 0,
+        credit: j.type === 'Credit' ? Number(j.amount) : 0
+      });
+    });
+
+    // 2. Inventory logs
+    displayLogs.forEach(log => {
+      const isCash = (log.cash_source || '').toLowerCase().includes('cash') || (log.payment_mode || '').toLowerCase().includes('cash');
+      const isBank = (log.cash_source || '').toLowerCase().includes('bank') || (log.payment_mode || '').toLowerCase().includes('bank') || (log.payment_mode || '').toLowerCase().includes('transfer');
+      if (!isCash && !isBank) return;
+      
+      const sourceAccount = accounts.find(a => 
+        a.type === 'Asset' && 
+        (isCash ? (a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('hand')) : (a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('meezan')))
+      );
+      if (!sourceAccount) return;
+      
+      if (selectedCashbookAccount !== 'all' && sourceAccount.id !== selectedCashbookAccount) return;
+      
+      const isReceipt = log.transaction_type === 'OUT';
+      const isPayment = log.transaction_type === 'IN';
+      
+      list.push({
+        id: `inv-${log.id}`,
+        date: log.date,
+        entryNo: `INV-${log.id}`,
+        description: `${log.item_name} (${log.remarks || ''})`,
+        account_name: sourceAccount.name,
+        debit: isReceipt ? Number(log.total_amount) : 0,
+        credit: isPayment ? Number(log.total_amount) : 0
+      });
+    });
+
+    list.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    let running = 0;
+    list.forEach(item => {
+      running += (item.debit - item.credit);
+      item.runningBalance = running;
+    });
+    
+    return list.reverse();
+  };
+
   const handleSaveEditJournal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingJournal) return;
@@ -745,6 +1109,318 @@ export function FinanceClient({
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* CREATE JOURNAL ENTRY MODAL */}
+      {isJournalModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-y-auto no-print-btn">
+          <Card className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-pink-200 dark:border-pink-900">
+            <CardHeader className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/50 dark:to-pink-950/30 border-b p-6 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-black flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-rose-600" />
+                {isUrdu ? 'نیا جرنل اینٹری واؤچر بنائیں' : 'Create New Journal Entry Voucher'}
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => setIsJournalModalOpen(false)} className="rounded-full"><X className="w-5 h-5"/></Button>
+            </CardHeader>
+            <form onSubmit={handlePostMultiLineJournal}>
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs">{isUrdu ? 'پوسٹنگ کی تاریخ' : 'Posting Date'}</Label>
+                    <Input type="date" value={jeDate} onChange={e => setJeDate(e.target.value)} required className="rounded-xl mt-1 h-9 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">{isUrdu ? 'تفصیل / نریشن' : 'Voucher Narrative'}</Label>
+                    <Input placeholder="e.g. Canteen commission received" value={jeDescription} onChange={e => setJeDescription(e.target.value)} required className="rounded-xl mt-1 h-9 text-xs" />
+                  </div>
+                </div>
+
+                <div className="border border-slate-200 rounded-xl overflow-hidden mt-4">
+                  <div className="bg-slate-50 dark:bg-slate-800 p-2 text-xs font-bold grid grid-cols-12 gap-2 text-slate-700 dark:text-slate-200">
+                    <span className="col-span-4">{isUrdu ? 'کھاتہ' : 'Account'}</span>
+                    <span className="col-span-3">{isUrdu ? 'ڈیبٹ (+)' : 'Debit (Rs)'}</span>
+                    <span className="col-span-3">{isUrdu ? 'کریڈٹ (-)' : 'Credit (Rs)'}</span>
+                    <span className="col-span-2 text-center"></span>
+                  </div>
+
+                  <div className="p-2 space-y-2 max-h-[220px] overflow-y-auto">
+                    {jeLines.map((line, idx) => (
+                      <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                        <div className="col-span-4">
+                          <select
+                            required
+                            className="flex h-8 w-full rounded-lg border border-input bg-background px-2 text-[10px] font-bold"
+                            value={line.accountId}
+                            onChange={e => {
+                              const updated = [...jeLines];
+                              updated[idx].accountId = e.target.value;
+                              setJeLines(updated);
+                            }}
+                          >
+                            <option value="">{isUrdu ? 'کھاتہ منتخب کریں' : '-- Select --'}</option>
+                            {accounts.map(a => (
+                              <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-span-3">
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={line.debit}
+                            className="h-8 text-xs font-bold font-mono"
+                            disabled={parseFloat(line.credit) > 0}
+                            onChange={e => {
+                              const updated = [...jeLines];
+                              updated[idx].debit = e.target.value;
+                              setJeLines(updated);
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={line.credit}
+                            className="h-8 text-xs font-bold font-mono"
+                            disabled={parseFloat(line.debit) > 0}
+                            onChange={e => {
+                              const updated = [...jeLines];
+                              updated[idx].credit = e.target.value;
+                              setJeLines(updated);
+                            }}
+                          />
+                        </div>
+                        <div className="col-span-2 text-center">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            disabled={jeLines.length <= 2}
+                            onClick={() => setJeLines(jeLines.filter((_, i) => i !== idx))}
+                            className="h-7 w-7 text-rose-600 hover:text-rose-700 rounded-full hover:bg-rose-50"
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-dashed mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 text-xs font-bold rounded-lg"
+                    onClick={() => setJeLines([...jeLines, { accountId: "", debit: "", credit: "", memo: "" }])}
+                  >
+                    + {isUrdu ? 'کھاتہ شامل کریں' : 'Add Line'}
+                  </Button>
+                  <div className="flex gap-4 text-xs font-bold text-right">
+                    {(() => {
+                      let deb = 0, cred = 0;
+                      jeLines.forEach(l => {
+                        deb += parseFloat(l.debit) || 0;
+                        cred += parseFloat(l.credit) || 0;
+                      });
+                      const isBalanced = Math.abs(deb - cred) < 0.01 && deb > 0;
+                      return (
+                        <>
+                          <div>
+                            <span className="block text-[10px] text-muted-foreground">{isUrdu ? 'کل ڈیبٹ' : 'Total Debit'}</span>
+                            <span className="text-emerald-600 font-mono">Rs. {deb.toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[10px] text-muted-foreground">{isUrdu ? 'کل کریڈٹ' : 'Total Credit'}</span>
+                            <span className="text-rose-600 font-mono">Rs. {cred.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center">
+                            {isBalanced ? (
+                              <Badge className="bg-emerald-600 text-white font-bold">{isUrdu ? 'متوازن ✓' : 'Balanced ✓'}</Badge>
+                            ) : (
+                              <Badge variant="destructive" className="font-bold">{isUrdu ? 'غیر متوازن' : 'Unbalanced'}</Badge>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsJournalModalOpen(false)} className="rounded-xl font-bold">{isUrdu ? 'منسوخ' : 'Cancel'}</Button>
+                  <Button
+                    type="submit"
+                    disabled={loading || !jeLines.some(l => l.accountId && (parseFloat(l.debit) > 0 || parseFloat(l.credit) > 0))}
+                    className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                  >
+                    {isUrdu ? 'پوسٹ واؤچر' : 'Post Voucher'}
+                  </Button>
+                </div>
+              </CardContent>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* RECORD PAYMENT VOUCHER MODAL */}
+      {isPaymentModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 no-print-btn">
+          <Card className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-pink-200 dark:border-pink-900">
+            <CardHeader className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/50 dark:to-pink-950/30 border-b p-6 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-black flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-rose-600" />
+                {isUrdu ? 'نیا ادائیگی / خرچہ واؤچر' : 'Record Payment / Expense Voucher'}
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => setIsPaymentModalOpen(false)} className="rounded-full"><X className="w-5 h-5"/></Button>
+            </CardHeader>
+            <form onSubmit={handlePostPaymentVoucher}>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <Label className="text-xs">{isUrdu ? 'ادائیگی کا تاریخ' : 'Payment Date'}</Label>
+                  <Input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} required className="rounded-xl mt-1 h-9 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-xs">{isUrdu ? 'فنڈز کا ذریعہ (کھاتہ)' : 'Pay From (Asset Book)'}</Label>
+                  <select
+                    required
+                    className="flex h-9 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold mt-1"
+                    value={payFromAccount}
+                    onChange={e => setPayFromAccount(e.target.value)}
+                  >
+                    <option value="">{isUrdu ? 'کیش یا بینک منتخب کریں' : '-- Select Cash/Bank --'}</option>
+                    {accounts.filter(a => a.type === 'Asset' && (a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('mcb') || a.name.toLowerCase().includes('meezan'))).map(a => (
+                      <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs">{isUrdu ? 'خرچہ کھاتہ (Expense Account)' : 'Pay To (Expense Account)'}</Label>
+                  <select
+                    required
+                    className="flex h-9 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold mt-1"
+                    value={payToAccount}
+                    onChange={e => setPayToAccount(e.target.value)}
+                  >
+                    <option value="">{isUrdu ? 'خرچہ کیٹیگری منتخب کریں' : '-- Select Expense account --'}</option>
+                    {accounts.filter(a => a.type === 'Expense').map(a => (
+                      <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs">{isUrdu ? 'رقم (Amount)' : 'Payment Amount (Rs.)'}</Label>
+                  <Input type="number" required placeholder="e.g. 15000" value={payAmount} onChange={e => setPayAmount(e.target.value)} className="rounded-xl mt-1 h-9 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-xs">{isUrdu ? 'تفصیل (Description)' : 'Narrative / Description'}</Label>
+                  <Input required placeholder="e.g. Canteen utility bill paid" value={payDesc} onChange={e => setPayDesc(e.target.value)} className="rounded-xl mt-1 h-9 text-xs" />
+                </div>
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsPaymentModalOpen(false)} className="rounded-xl font-bold">{isUrdu ? 'منسوخ' : 'Cancel'}</Button>
+                  <Button type="submit" disabled={loading} className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">{isUrdu ? 'رپورٹ کریں' : 'Post Payment'}</Button>
+                </div>
+              </CardContent>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* ADD BANK ACCOUNT MODAL */}
+      {isAddAccountModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 no-print-btn">
+          <Card className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-pink-200 dark:border-pink-900">
+            <CardHeader className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/50 dark:to-pink-950/30 border-b p-6 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-black flex items-center gap-2">
+                <Landmark className="w-5 h-5 text-rose-600" />
+                {isUrdu ? 'نیا کیش/بینک کھاتہ شامل کریں' : 'Add Cash / Bank Account Asset'}
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => setIsAddAccountModalOpen(false)} className="rounded-full"><X className="w-5 h-5"/></Button>
+            </CardHeader>
+            <form onSubmit={handleCreateBankAccount}>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <Label className="text-xs">{isUrdu ? 'کھاتہ کوڈ (Code)' : 'Account Code (Asset nature 1xxx)'}</Label>
+                  <Input required placeholder="e.g. 1006" value={bankAccCode} onChange={e => setBankAccCode(e.target.value)} className="rounded-xl mt-1 h-9 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-xs">{isUrdu ? 'کھاتہ کا نام' : 'Account Name'}</Label>
+                  <Input required placeholder="e.g. Habib Bank Ltd Account" value={bankAccName} onChange={e => setBankAccName(e.target.value)} className="rounded-xl mt-1 h-9 text-xs" />
+                </div>
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsAddAccountModalOpen(false)} className="rounded-xl font-bold">{isUrdu ? 'منسوخ' : 'Cancel'}</Button>
+                  <Button type="submit" disabled={loading} className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold">{isUrdu ? 'کھاتہ کھولیں' : 'Add Account'}</Button>
+                </div>
+              </CardContent>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* VIEW JOURNAL ENTRY DETAILS MODAL */}
+      {viewingVoucher && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-y-auto no-print-btn">
+          <Card className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-pink-200 dark:border-pink-900">
+            <CardHeader className="bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/50 dark:to-pink-950/30 border-b p-6 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-black flex items-center gap-2">
+                <Stamp className="w-5 h-5 text-rose-600" />
+                {isUrdu ? `جرنل واؤچر کی تفصیل — ${viewingVoucher.entryNo}` : `Journal Voucher Details — ${viewingVoucher.entryNo}`}
+              </CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => setViewingVoucher(null)} className="rounded-full"><X className="w-5 h-5"/></Button>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
+                <div><span className="text-muted-foreground">{isUrdu ? 'واؤچر نمبر:' : 'Voucher No:'}</span> <strong className="text-slate-900 dark:text-slate-100">{viewingVoucher.entryNo}</strong></div>
+                <div><span className="text-muted-foreground">{isUrdu ? 'تاریخ:' : 'Date:'}</span> <strong className="text-slate-900 dark:text-slate-100">{viewingVoucher.entry_date}</strong></div>
+                <div className="col-span-2"><span className="text-muted-foreground">{isUrdu ? 'تفصیل / بیانیہ:' : 'Narrative / Description:'}</span> <p className="text-slate-800 dark:text-slate-200 font-bold mt-0.5">{viewingVoucher.description}</p></div>
+              </div>
+
+              <div className="border rounded-xl overflow-hidden mt-4">
+                <Table>
+                  <TableHeader className="bg-slate-50 dark:bg-slate-800/40">
+                    <TableRow>
+                      <TableHead className="pl-4 text-xs font-bold">{isUrdu ? 'کھاتہ کا نام' : 'Account Name'}</TableHead>
+                      <TableHead className="text-right text-xs font-bold">{isUrdu ? 'ڈیبٹ (+)' : 'Debit'}</TableHead>
+                      <TableHead className="text-right pr-4 text-xs font-bold">{isUrdu ? 'کریڈٹ (-)' : 'Credit'}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-xs font-semibold">
+                    {viewingVoucher.lines.map((line, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="pl-4 font-bold text-slate-800 dark:text-slate-200">
+                          {line.account_name} ({line.account_code})
+                        </TableCell>
+                        <TableCell className="text-right text-emerald-600 font-mono font-bold">
+                          {line.type === 'Debit' ? `Rs. ${line.amount.toLocaleString()}` : '—'}
+                        </TableCell>
+                        <TableCell className="text-right pr-4 text-rose-600 font-mono font-bold">
+                          {line.type === 'Credit' ? `Rs. ${line.amount.toLocaleString()}` : '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(() => {
+                      const totalDeb = viewingVoucher.lines.reduce((s, l) => s + (l.type === 'Debit' ? l.amount : 0), 0);
+                      return (
+                        <TableRow className="bg-muted/30 font-black border-t-2">
+                          <TableCell className="pl-4 text-[10px] uppercase">{isUrdu ? 'میزان مجموعی:' : 'Total balanced:'}</TableCell>
+                          <TableCell className="text-right text-emerald-700 font-mono">Rs. {totalDeb.toLocaleString()}</TableCell>
+                          <TableCell className="text-right pr-4 text-rose-700 font-mono">Rs. {totalDeb.toLocaleString()}</TableCell>
+                        </TableRow>
+                      );
+                    })()}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <Button onClick={() => setViewingVoucher(null)} className="rounded-xl font-bold bg-rose-600 hover:bg-rose-700 text-white px-6">
+                  {isUrdu ? 'بند کریں' : 'Close'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
@@ -1074,64 +1750,34 @@ export function FinanceClient({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-4 px-4 pb-4">
-                    <form onSubmit={handleAddAccount} className="space-y-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">{isUrdu ? 'کھاتہ کوڈ (Code)' : 'Account Code'}</Label>
-                        <Input required placeholder="e.g. 1006" value={newAccountCode} onChange={e => setNewAccountCode(e.target.value)} className="h-9 text-xs" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">{isUrdu ? 'کھاتہ کا نام (Name)' : 'Account Name'}</Label>
-                        <Input required placeholder="e.g. Office Furniture" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} className="h-9 text-xs" />
-                      </div>
-                      <Button type="submit" className="w-full h-9 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold" disabled={loading}>
-                        {isUrdu ? 'نیا کھاتہ بنائیں' : 'Create Account'}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-
-                {/* Post Transaction Card */}
+                    <form onSubmit={handleAddAccou                {/* Voucher Operations Card */}
                 <Card className="border-border shadow-sm bg-card h-fit">
                   <CardHeader className="bg-muted/50 border-b border-border py-3 px-4">
                     <CardTitle className="text-sm font-extrabold flex items-center gap-2">
                       <Receipt className="w-4 h-4 text-rose-600" />
-                      {isUrdu ? 'ٹرانزیکشن پوسٹ کریں' : 'Post Journal Entry'}
+                      {isUrdu ? 'فنانشل واؤچرز درج کریں' : 'Voucher Transactions'}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-4 px-4 pb-4">
-                    <form onSubmit={handleAddJournal} className="space-y-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">{isUrdu ? 'کھاتہ منتخب کریں' : 'Select Account'}</Label>
-                        <select required className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-xs" value={accountId} onChange={e => setAccountId(e.target.value)}>
-                          <option value="">{isUrdu ? 'منتخب کریں...' : 'Select Account...'}</option>
-                          {accounts.filter(a => a.type === subTab).map(a => (
-                            <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">{isUrdu ? 'ٹائپ (Debit/Credit)' : 'Entry Type'}</Label>
-                        <select className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-xs" value={journalType} onChange={e => setJournalType(e.target.value)}>
-                          <option value="Debit">Debit (+)</option>
-                          <option value="Credit">Credit (-)</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">{isUrdu ? 'رقم (Rs.)' : 'Amount (Rs.)'}</Label>
-                        <Input type="number" required placeholder="Amount" value={journalAmount} onChange={e => setJournalAmount(e.target.value)} className="h-9 text-xs" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">{isUrdu ? 'تفصیل' : 'Description'}</Label>
-                        <Input required placeholder="Transaction description" value={journalDesc} onChange={e => setJournalDesc(e.target.value)} className="h-9 text-xs" />
-                      </div>
-                      <Button type="submit" className="w-full h-9 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold" disabled={loading}>
-                        {isUrdu ? 'اینٹری پوسٹ کریں' : 'Post Transaction'}
-                      </Button>
-                    </form>
+                  <CardContent className="pt-4 px-4 pb-4 space-y-3">
+                    <p className="text-xs text-muted-foreground font-semibold">
+                      {isUrdu ? 'ترقی یافتہ ڈبل اینٹری جرنل اور ادائیگیوں کو یہاں سے درج کریں۔' : 'Create balanced double entry journal vouchers and expense payments.'}
+                    </p>
+                    <Button type="button" onClick={() => setIsJournalModalOpen(true)} className="w-full h-9 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 rounded-xl">
+                      <Plus className="w-4 h-4" />
+                      {isUrdu ? 'نیا جرنل واؤچر بنائیں' : 'New Journal Voucher'}
+                    </Button>
+                    <Button type="button" onClick={() => setIsPaymentModalOpen(true)} className="w-full h-9 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 rounded-xl">
+                      <CreditCard className="w-4 h-4" />
+                      {isUrdu ? 'نیا ادائیگی واؤچر (خرچہ)' : 'New Payment / Expense'}
+                    </Button>
+                    <Button type="button" onClick={() => setIsAddAccountModalOpen(true)} className="w-full h-9 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 rounded-xl">
+                      <Landmark className="w-4 h-4" />
+                      {isUrdu ? 'نیا کیش/بینک کھاتہ ایڈ کریں' : 'Add Cash / Bank Account'}
+                    </Button>
                   </CardContent>
                 </Card>
               </div>
-
+ 
               {/* Right Column: Tables */}
               <div className="lg:col-span-2 space-y-6">
                 {/* Accounts & Balances Table */}
@@ -1174,68 +1820,85 @@ export function FinanceClient({
                     </Table>
                   </CardContent>
                 </Card>
-
-                {/* Ledger Entries List */}
+ 
+                {/* Grouped Journal Vouchers List */}
                 <Card className="border-border shadow-sm bg-card overflow-hidden">
                   <CardHeader className="bg-muted/50 border-b border-border py-3 px-4 flex flex-row items-center justify-between">
                     <CardTitle className="text-sm font-extrabold">
-                      {isUrdu ? `${subTab} لیجر ٹرانزیکشن لاگز` : `${subTab} Ledger Transactions`}
+                      {isUrdu ? 'ڈبل اینٹری جرنل لیجر بوک' : 'Double Entry Ledger Book'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
                     <Table>
                       <TableHeader className="bg-muted/30">
                         <TableRow>
-                          <TableHead className="pl-4 text-xs font-bold">{isUrdu ? 'تاریخ' : 'Date'}</TableHead>
-                          <TableHead className="text-xs font-bold">{isUrdu ? 'تفصیل / کھاتہ' : 'Details / Account'}</TableHead>
-                          <TableHead className="text-center text-xs font-bold">{isUrdu ? 'ڈیبٹ (+)' : 'Debit'}</TableHead>
-                          <TableHead className="text-center text-xs font-bold">{isUrdu ? 'کریڈٹ (-)' : 'Credit'}</TableHead>
+                          <TableHead className="pl-4 text-xs font-bold">{isUrdu ? 'واؤچر نمبر' : 'Voucher No'}</TableHead>
+                          <TableHead className="text-xs font-bold">{isUrdu ? 'تاریخ' : 'Date'}</TableHead>
+                          <TableHead className="text-xs font-bold">{isUrdu ? 'بیانیہ / تفصیل' : 'Narrative / Description'}</TableHead>
+                          <TableHead className="text-right text-xs font-bold">{isUrdu ? 'کل رقم' : 'Amount'}</TableHead>
+                          <TableHead className="text-center text-xs font-bold">{isUrdu ? 'حیثیت' : 'Status'}</TableHead>
                           <TableHead className="text-right pr-4 text-xs font-bold"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {[...journal].sort((a, b) => new Date(b.entry_date).getTime() - new Date(a.entry_date).getTime()).filter(j => {
-                          const accDetails = j.chart_of_accounts || accounts.find(a => a.id === j.account_id || a.code === j.account_id);
-                          return accDetails?.type === subTab;
-                        }).map(j => {
-                          const accDetails = j.chart_of_accounts || accounts.find(a => a.id === j.account_id || a.code === j.account_id);
-                          const isDebit = j.type === 'Debit';
+                        {(() => {
+                          const grouped = getGroupedJournalEntries();
                           return (
-                            <TableRow key={j.id} className="text-xs">
-                              <TableCell className="pl-4 font-mono text-slate-500 font-bold whitespace-nowrap">
-                                {j.entry_date?.split('T')[0]}
-                              </TableCell>
-                              <TableCell>
-                                <div>
-                                  <p className="font-bold text-slate-900 dark:text-slate-200">{accDetails?.name || 'Account'}</p>
-                                  <p className="text-[10px] text-muted-foreground truncate max-w-[150px]">{j.description}</p>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-center font-mono font-bold text-emerald-600">
-                                {isDebit ? `Rs. ${Number(j.amount).toLocaleString()}` : '-'}
-                              </TableCell>
-                              <TableCell className="text-center font-mono font-bold text-rose-600">
-                                {!isDebit ? `Rs. ${Number(j.amount).toLocaleString()}` : '-'}
-                              </TableCell>
-                              <TableCell className="text-right pr-4">
-                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-rose-600 hover:text-rose-700 hover:bg-rose-50" onClick={() => handleDeleteJournal(j.id)}>
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
+                            <>
+                              {grouped.map(je => {
+                                const debits = je.lines.reduce((s, l) => s + (l.type === 'Debit' ? l.amount : 0), 0);
+                                return (
+                                  <TableRow key={je.id} className="text-xs">
+                                    <TableCell className="pl-4 font-mono font-bold text-rose-600 dark:text-rose-400">
+                                      {je.entryNo}
+                                    </TableCell>
+                                    <TableCell className="font-mono text-slate-500 whitespace-nowrap">
+                                      {je.entry_date?.split('T')[0]}
+                                    </TableCell>
+                                    <TableCell className="font-bold max-w-[200px] truncate">
+                                      {je.description}
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono font-black text-emerald-600">
+                                      Rs. {debits.toLocaleString()}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      <Badge className="bg-emerald-600 text-white font-bold text-[10px] py-0.5 px-2">Posted</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right pr-4">
+                                      <div className="flex justify-end gap-1.5">
+                                        <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[10px] font-bold rounded-lg border-indigo-200 hover:bg-indigo-50 text-indigo-700" onClick={() => setViewingVoucher(je)}>
+                                          👁️ {isUrdu ? 'تفصیل' : 'View'}
+                                        </Button>
+                                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-rose-600 hover:bg-rose-50 rounded-full" onClick={async () => {
+                                          if (!confirm(isUrdu ? "کیا آپ واقعی اس واؤچر کی تمام اینٹریز کو حذف کرنا چاہتے ہیں؟" : "Are you sure you want to delete all entries for this voucher?")) return;
+                                          for (const line of je.lines) {
+                                            if (!line.id.includes('j_multi_') && !line.id.includes('j_pv')) {
+                                              await supabase.from('journal_entries').delete().eq('id', line.id);
+                                            }
+                                          }
+                                          setJournal(prev => {
+                                            const updated = prev.filter(j => !je.lines.some(l => l.id === j.id));
+                                            localStorage.setItem("bs_journal_entries_v1", JSON.stringify(updated));
+                                            return updated;
+                                          });
+                                        }}>
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                              {grouped.length === 0 && (
+                                <TableRow>
+                                  <TableCell colSpan={6} className="text-center py-4 text-xs text-muted-foreground italic">
+                                    {isUrdu ? 'کوئی واؤچر موجود نہیں ہے۔' : 'No journal vouchers found.'}
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </>
                           );
-                        }).slice(0, 50)}
-                        {journal.filter(j => {
-                          const accDetails = j.chart_of_accounts || accounts.find(a => a.id === j.account_id || a.code === j.account_id);
-                          return accDetails?.type === subTab;
-                        }).length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center py-4 text-xs text-muted-foreground italic">
-                              {isUrdu ? 'کوئی ٹرانزیکشن موجود نہیں ہے۔' : 'No transactions found.'}
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
+                        })()}
                     </Table>
                   </CardContent>
                 </Card>
@@ -1306,79 +1969,79 @@ export function FinanceClient({
               </Card>
             </div>
 
-            {/* LEDGER FILTERS */}
+            {/* CASH BOOK CONTROLS */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4 border-b border-border print:hidden">
               <div className="flex items-center gap-2">
-                <Landmark className="w-5 h-5 text-emerald-600" />
+                <WalletCards className="w-5 h-5 text-emerald-600" />
                 <h2 className="text-xl font-extrabold text-foreground">
-                  {isUrdu ? 'کیش بک کھاتہ لیجر بک' : 'General Ledger & Cash Book'}
+                  {isUrdu ? 'کیش بک اور بینک لیجرز' : 'Cash Book & Bank Ledgers'}
                 </h2>
               </div>
-              <div className="bg-muted p-1 rounded-xl flex border w-fit mx-auto sm:mx-0">
-                <button 
-                  onClick={() => setLedgerFilter('ALL')}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'ALL' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  className="flex h-9 rounded-xl border border-input bg-background px-3 text-xs font-bold animate-in"
+                  value={selectedCashbookAccount}
+                  onChange={e => setSelectedCashbookAccount(e.target.value)}
                 >
-                  {isUrdu ? 'تمام لاگز' : 'All Transactions'}
-                </button>
-                <button 
-                  onClick={() => setLedgerFilter('CASH')}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'CASH' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
-                >
-                  {isUrdu ? 'کیش / بینک' : 'Cash Book'}
-                </button>
-                <button 
-                  onClick={() => setLedgerFilter('CREDIT')}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'CREDIT' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
-                >
-                  {isUrdu ? 'ادھار کھاتہ' : 'Credit Ledger'}
-                </button>
-                <button 
-                  onClick={() => setLedgerFilter('INTERNAL')}
-                  className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${ledgerFilter === 'INTERNAL' ? 'bg-background shadow-sm text-foreground font-black' : 'text-muted-foreground'}`}
-                >
-                  {isUrdu ? 'شعبہ جاتی استعمال' : 'Internal Use'}
-                </button>
+                  <option value="all">{isUrdu ? 'تمام کیش و بینک اکاؤنٹس' : 'All Cash & Bank Accounts'}</option>
+                  {accounts.filter(a => a.type === 'Asset' && (a.name.toLowerCase().includes('cash') || a.name.toLowerCase().includes('bank') || a.name.toLowerCase().includes('mcb') || a.name.toLowerCase().includes('meezan'))).map(a => (
+                    <option key={a.id} value={a.id}>{a.code} - {a.name}</option>
+                  ))}
+                </select>
+                <Button type="button" onClick={() => setIsAddAccountModalOpen(true)} className="h-9 bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center gap-1">
+                  <Landmark className="w-4 h-4" />
+                  {isUrdu ? 'نیا بینک اکاؤنٹ کھولیں' : 'Add Bank / Cash Account'}
+                </Button>
               </div>
             </div>
 
-            {/* LEDGER GENERAL BOOK TABLE */}
+            {/* CASH BOOK RUNNING LEDGER TABLE */}
             <Card className="border-border shadow-xl bg-card rounded-3xl overflow-hidden print:border-none print:shadow-none">
               <CardContent className="p-0 overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead className="pl-6 font-bold">{isUrdu ? 'تاریخ (Time)' : 'Date'}</TableHead>
-                      <TableHead className="font-bold">{isUrdu ? 'تفصیل ٹرانزیکشن' : 'Description / Item Name'}</TableHead>
-                      <TableHead className="font-bold">{isUrdu ? 'ادائیگی کا ذریعہ (Source)' : 'Wallet Source'}</TableHead>
-                      <TableHead className="font-bold">{isUrdu ? 'طریقہ کار (Mode)' : 'Payment Mode'}</TableHead>
-                      <TableHead className="font-bold text-center">{isUrdu ? 'مقدار' : 'Quantity'}</TableHead>
-                      <TableHead className="font-bold text-center">{isUrdu ? 'یونٹ قیمت' : 'Unit Price'}</TableHead>
-                      <TableHead className="text-right pr-6 font-bold">{isUrdu ? 'ڈیبٹ / کریڈٹ (Amount)' : 'Total Amount (+/-)'}</TableHead>
+                      <TableHead className="pl-6 text-xs font-bold">{isUrdu ? 'تاریخ' : 'Date'}</TableHead>
+                      <TableHead className="text-xs font-bold">{isUrdu ? 'واؤچر نمبر / حوالہ' : 'Ref No'}</TableHead>
+                      <TableHead className="text-xs font-bold">{isUrdu ? 'تفصیل / بیانیہ' : 'Narrative'}</TableHead>
+                      <TableHead className="text-xs font-bold">{isUrdu ? 'کیش / بینک اکاؤنٹ' : 'Book Name'}</TableHead>
+                      <TableHead className="text-right text-xs font-bold">{isUrdu ? 'ڈیبٹ (+ آمد)' : 'Debit (In)'}</TableHead>
+                      <TableHead className="text-right text-xs font-bold">{isUrdu ? 'کریڈٹ (- خرچ)' : 'Credit (Out)'}</TableHead>
+                      <TableHead className="text-right pr-6 text-xs font-bold">{isUrdu ? 'رننگ بیلنس' : 'Running Balance'}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody className="text-xs font-semibold">
-                    {filteredLogs.map((log: any, idx: number) => {
-                      const isExpense = log.transaction_type === 'IN' || log.payment_mode === 'Supplier Payment';
+                    {(() => {
+                      const cbLogs = getCashbookTransactions();
                       return (
-                        <TableRow key={idx}>
-                          <TableCell className="pl-6 font-bold font-mono text-slate-500">{log.date?.split('T')[0]}</TableCell>
-                          <TableCell>
-                            <div>
-                              <p className="font-black text-slate-800 dark:text-slate-200">{log.item_name || log.description || 'Transaction'}</p>
-                              {log.remarks && <p className="text-[10px] text-muted-foreground italic mt-0.5">"{log.remarks}"</p>}
-                            </div>
-                          </TableCell>
-                          <TableCell><Badge variant="outline" className="font-bold">{log.cash_source || 'N/A'}</Badge></TableCell>
-                          <TableCell><Badge className="bg-slate-100 text-slate-800 font-bold border">{log.payment_mode || 'N/A'}</Badge></TableCell>
-                          <TableCell className="text-center font-mono">{log.quantity || 1}</TableCell>
-                          <TableCell className="text-center font-mono">Rs. {Number(log.unit_price || 0).toLocaleString()}</TableCell>
-                          <TableCell className={`text-right pr-6 font-mono font-black text-sm ${isExpense ? 'text-rose-600' : 'text-emerald-600'}`}>
-                            {isExpense ? '-' : '+'}Rs. {Number(log.total_amount || 0).toLocaleString()}
-                          </TableCell>
-                        </TableRow>
+                        <>
+                          {cbLogs.map((item: any, idx: number) => (
+                            <TableRow key={item.id || idx}>
+                              <TableCell className="pl-6 font-bold font-mono text-slate-500">{item.date?.split('T')[0]}</TableCell>
+                              <TableCell className="font-bold text-rose-600 font-mono">{item.entryNo}</TableCell>
+                              <TableCell className="font-bold max-w-[200px] truncate">{item.description}</TableCell>
+                              <TableCell className="text-slate-500 font-semibold">{item.account_name}</TableCell>
+                              <TableCell className="text-right font-mono font-bold text-emerald-600">
+                                {item.debit > 0 ? `Rs. ${item.debit.toLocaleString()}` : '—'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono font-bold text-rose-600">
+                                {item.credit > 0 ? `Rs. ${item.credit.toLocaleString()}` : '—'}
+                              </TableCell>
+                              <TableCell className="text-right pr-6 font-mono font-black text-slate-900 dark:text-slate-100 text-sm">
+                                Rs. {item.runningBalance.toLocaleString()}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {cbLogs.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-6 text-xs text-muted-foreground italic">
+                                {isUrdu ? 'اس اکاؤنٹ میں کوئی ٹرانزیکشن موجود نہیں ہے۔' : 'No transactions found for this cashbook account.'}
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
                       );
-                    })}
+                    })()}
                   </TableBody>
                 </Table>
               </CardContent>
