@@ -506,7 +506,7 @@ export function StudentsClient({ initialStudents }: { initialStudents: Student[]
           </Card>
 
           {/* Students List Table with Action Badges */}
-          <Card className="lg:col-span-2 border-border shadow-sm h-fit">
+          <Card className="lg:col-span-2 border-border shadow-sm h-fit overflow-hidden w-full">
             <CardHeader className="bg-muted/50 border-b border-border flex flex-row items-center justify-between">
               <div>
                 <CardTitle>{t("enrolledStudents")}</CardTitle>
