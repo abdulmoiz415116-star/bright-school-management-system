@@ -1750,7 +1750,23 @@ export function FinanceClient({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-4 px-4 pb-4">
-                    <form onSubmit={handleAddAccou                {/* Voucher Operations Card */}
+                    <form onSubmit={handleAddAccount} className="space-y-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">{isUrdu ? 'کھاتہ کوڈ (Code)' : 'Account Code'}</Label>
+                        <Input required placeholder="e.g. 1006" value={newAccountCode} onChange={e => setNewAccountCode(e.target.value)} className="h-9 text-xs" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">{isUrdu ? 'کھاتہ کا نام (Name)' : 'Account Name'}</Label>
+                        <Input required placeholder="e.g. Office Furniture" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} className="h-9 text-xs" />
+                      </div>
+                      <Button type="submit" className="w-full h-9 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold" disabled={loading}>
+                        {isUrdu ? 'نیا کھاتہ بنائیں' : 'Create Account'}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+
+                {/* Voucher Operations Card */}
                 <Card className="border-border shadow-sm bg-card h-fit">
                   <CardHeader className="bg-muted/50 border-b border-border py-3 px-4">
                     <CardTitle className="text-sm font-extrabold flex items-center gap-2">
@@ -1899,6 +1915,7 @@ export function FinanceClient({
                             </>
                           );
                         })()}
+                      </TableBody>
                     </Table>
                   </CardContent>
                 </Card>
