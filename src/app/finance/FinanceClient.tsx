@@ -29,7 +29,7 @@ export function FinanceClient({
 }) {
   const locale = useLocale();
   const isUrdu = locale === 'ur';
-  const [activeTab, setActiveTab] = useState<'fees' | 'payroll' | 'ledger' | 'cashbook'>('fees');
+  const [activeTab, setActiveTab] = useState<'fees' | 'payroll' | 'ledger' | 'cashbook' | 'trial_balance' | 'statements'>('fees');
   const [ledgerFilter, setLedgerFilter] = useState<'ALL' | 'CASH' | 'CREDIT' | 'INTERNAL'>('ALL');
   
   const [cashInHand, setCashInHand] = useState<number>(() => {
@@ -838,11 +838,13 @@ export function FinanceClient({
             </h1>
             <p className="text-muted-foreground mt-1">{isUrdu ? 'فیس کی وصولی، چالان پرنٹنگ اور پے رول ہسٹری' : 'Manage fees, vouchers, payroll, and general ledger.'}</p>
           </div>
-          <div className="bg-muted p-1.5 rounded-2xl flex border border-border/50 max-w-lg print:hidden overflow-x-auto gap-1">
+          <div className="bg-muted p-1.5 rounded-2xl flex border border-border/50 max-w-3xl print:hidden overflow-x-auto gap-1">
             <button onClick={() => setActiveTab('fees')} className={`px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${activeTab === 'fees' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'}`}>Fees & Dues</button>
             <button onClick={() => setActiveTab('payroll')} className={`px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${activeTab === 'payroll' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'}`}>Payroll & Slips</button>
             <button onClick={() => setActiveTab('cashbook')} className={`px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${activeTab === 'cashbook' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'}`}>{isUrdu ? 'کیش بک (Cash Book)' : 'Cash Book'}</button>
             <button onClick={() => setActiveTab('ledger')} className={`px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${activeTab === 'ledger' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'}`}>General Ledger</button>
+            <button onClick={() => setActiveTab('trial_balance')} className={`px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${activeTab === 'trial_balance' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'}`}>{isUrdu ? 'ٹرائل بیلنس' : 'Trial Balance'}</button>
+            <button onClick={() => setActiveTab('statements')} className={`px-4 py-2.5 text-xs sm:text-sm font-bold rounded-xl transition-all whitespace-nowrap ${activeTab === 'statements' ? 'bg-background shadow-md text-foreground font-black' : 'text-muted-foreground hover:text-foreground'}`}>{isUrdu ? 'فنانشل گوشوارے' : 'Financial Statements'}</button>
           </div>
         </div>
 
@@ -1381,6 +1383,290 @@ export function FinanceClient({
                 </Table>
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* TRIAL BALANCE TAB */}
+        {activeTab === 'trial_balance' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="flex items-center gap-2 pb-4 border-b border-border">
+              <Activity className="w-5 h-5 text-rose-600" />
+              <h2 className="text-xl font-extrabold text-foreground">
+                {isUrdu ? 'ٹرائل بیلنس (Trial Balance Ledger)' : 'General Ledger Trial Balance'}
+              </h2>
+            </div>
+            
+            <Card className="border-border shadow-xl bg-card rounded-3xl overflow-hidden">
+              <CardContent className="p-0 overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="pl-6 font-bold">{isUrdu ? 'کھاتہ کوڈ (Code)' : 'Account Code'}</TableHead>
+                      <TableHead className="font-bold">{isUrdu ? 'کھاتہ عنوان (Title)' : 'Account Title'}</TableHead>
+                      <TableHead className="font-bold">{isUrdu ? 'نوعیت (Type)' : 'Type'}</TableHead>
+                      <TableHead className="font-bold text-right pr-6">{isUrdu ? 'ڈیبٹ رقم (Debit)' : 'Debit (Rs)'}</TableHead>
+                      <TableHead className="font-bold text-right pr-6">{isUrdu ? 'کریڈٹ رقم (Credit)' : 'Credit (Rs)'}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="text-xs font-semibold">
+                    {(() => {
+                      let totalDebit = 0;
+                      let totalCredit = 0;
+                      return (
+                        <>
+                          {accounts.map(a => {
+                            const bal = getAccountBalance(a.id, a.type);
+                            let debit = 0;
+                            let credit = 0;
+                            if (a.type === 'Asset' || a.type === 'Expense') {
+                              if (bal >= 0) debit = bal;
+                              else credit = Math.abs(bal);
+                            } else {
+                              if (bal >= 0) credit = bal;
+                              else debit = Math.abs(bal);
+                            }
+                            totalDebit += debit;
+                            totalCredit += credit;
+                            return (
+                              <TableRow key={a.id}>
+                                <TableCell className="pl-6 font-bold font-mono text-slate-500">{a.code}</TableCell>
+                                <TableCell className="font-black text-slate-800 dark:text-slate-200">{a.name}</TableCell>
+                                <TableCell><Badge variant="outline" className="font-bold">{a.type}</Badge></TableCell>
+                                <TableCell className="text-right pr-6 font-mono text-emerald-600 font-bold">
+                                  {debit > 0 ? `Rs. ${debit.toLocaleString()}` : '—'}
+                                </TableCell>
+                                <TableCell className="text-right pr-6 font-mono text-rose-600 font-bold">
+                                  {credit > 0 ? `Rs. ${credit.toLocaleString()}` : '—'}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          <TableRow className="bg-muted/50 font-black border-t-2 border-slate-900 dark:border-slate-100">
+                            <TableCell colSpan={3} className="pl-6 text-sm">{isUrdu ? 'کل میزان (Grand Total)' : 'Grand Total:'}</TableCell>
+                            <TableCell className="text-right pr-6 font-mono text-emerald-700 text-sm font-black">Rs. {totalDebit.toLocaleString()}</TableCell>
+                            <TableCell className="text-right pr-6 font-mono text-rose-700 text-sm font-black">Rs. {totalCredit.toLocaleString()}</TableCell>
+                          </TableRow>
+                        </>
+                      );
+                    })()}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* STATEMENTS TAB */}
+        {activeTab === 'statements' && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            <div className="flex items-center gap-2 pb-4 border-b border-border">
+              <WalletCards className="w-5 h-5 text-rose-600" />
+              <h2 className="text-xl font-extrabold text-foreground">
+                {isUrdu ? 'مالیاتی گوشوارے (Financial Statements)' : 'Official Financial Statements'}
+              </h2>
+            </div>
+
+            {(() => {
+              // Calculate values for Statements
+              const totalFeesRevenue = fees.reduce((sum, f) => sum + f.amount, 0);
+              const otherRevenue = journal
+                .filter(j => {
+                  const acc = accounts.find(a => a.id === j.account_id || a.code === j.account_id);
+                  return acc?.type === 'Revenue';
+                })
+                .reduce((sum, j) => {
+                  const amt = Number(j.amount || 0);
+                  return sum + (j.type === 'Credit' ? amt : -amt);
+                }, 0);
+
+              const totalInc = totalFeesRevenue + totalSalesRevenue + otherRevenue;
+              const salariesExpense = payroll.reduce((sum, p) => sum + p.net_salary, 0);
+              
+              const otherExpenses = journal
+                .filter(j => {
+                  const acc = accounts.find(a => a.id === j.account_id || a.code === j.account_id);
+                  return acc?.type === 'Expense';
+                })
+                .reduce((sum, j) => {
+                  const amt = Number(j.amount || 0);
+                  return sum + (j.type === 'Debit' ? amt : -amt);
+                }, 0);
+
+              const totalExp = totalCostOfGoodsSold + salariesExpense + otherExpenses;
+              const netProfitYTD = totalInc - totalExp;
+
+              // Balance Sheet
+              // Standard Asset/Liab/Equity listings
+              const assetAccounts = accounts.filter(a => a.type === 'Asset');
+              const liabAccounts = accounts.filter(a => a.type === 'Liability');
+              const equityAccounts = accounts.filter(a => a.type === 'Equity');
+
+              const totalAssetsVal = assetAccounts.reduce((sum, a) => sum + getAccountBalance(a.id, a.type), 0);
+              const totalLiabilitiesVal = liabAccounts.reduce((sum, a) => sum + getAccountBalance(a.id, a.type), 0);
+              const baseEquityVal = equityAccounts.reduce((sum, a) => sum + getAccountBalance(a.id, a.type), 0);
+              const totalEquityVal = baseEquityVal + netProfitYTD;
+
+              return (
+                <div className="grid gap-8 lg:grid-cols-2">
+                  {/* INCOME STATEMENT */}
+                  <Card className="border-border shadow-xl bg-card rounded-3xl overflow-hidden">
+                    <CardHeader className="bg-muted/50 border-b border-border p-5">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-base font-extrabold flex items-center gap-2">
+                          <span>📊</span>
+                          {isUrdu ? 'آمدنی کا گوشوارہ (P&L Statement)' : 'Income Statement (Profit & Loss)'}
+                        </CardTitle>
+                        <Badge variant="secondary" className="font-bold text-[10px] uppercase">YTD</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4 text-xs font-semibold">
+                      {/* Income */}
+                      <div className="border-b pb-2">
+                        <h4 className="font-black text-sm text-slate-900 dark:text-slate-100 mb-2 uppercase">{isUrdu ? 'کل آمدنی (Revenue)' : 'Operating Revenues'}</h4>
+                        <div className="flex justify-between py-1"><span>{isUrdu ? 'فیس وصولی (School Fees)' : 'Tuition & Admission Fees'}</span><span className="font-mono text-emerald-600 font-bold">Rs. {totalFeesRevenue.toLocaleString()}</span></div>
+                        <div className="flex justify-between py-1"><span>{isUrdu ? 'فروخت سیلز (Inventory Revenue)' : 'General Sales Revenue'}</span><span className="font-mono text-emerald-600 font-bold">Rs. {totalSalesRevenue.toLocaleString()}</span></div>
+                        {otherRevenue > 0 && <div className="flex justify-between py-1"><span>{isUrdu ? 'دیگر آمدنی (Other Income)' : 'Other Ledger Income'}</span><span className="font-mono text-emerald-600 font-bold">Rs. {otherRevenue.toLocaleString()}</span></div>}
+                        <div className="flex justify-between py-1.5 font-bold text-slate-800 dark:text-slate-200 border-t border-slate-200 mt-1"><span>{isUrdu ? 'مجموعی آمدنی:' : 'Total Revenues:'}</span><span className="font-mono">Rs. {totalInc.toLocaleString()}</span></div>
+                      </div>
+
+                      {/* Cost of Goods */}
+                      <div className="border-b pb-2">
+                        <h4 className="font-black text-sm text-slate-900 dark:text-slate-100 mb-2 uppercase">{isUrdu ? 'براہ راست اخراجات (COGS)' : 'Cost of Revenues'}</h4>
+                        <div className="flex justify-between py-1"><span>{isUrdu ? 'فروخت شدہ مال کی لاگت' : 'Cost of Goods Sold (COGS)'}</span><span className="font-mono text-rose-600 font-bold">Rs. {totalCostOfGoodsSold.toLocaleString()}</span></div>
+                        <div className="flex justify-between py-1.5 font-bold text-slate-800 dark:text-slate-200 border-t border-slate-200 mt-1"><span>{isUrdu ? 'خام منافع (Gross Profit):' : 'Gross Profit:'}</span><span className="font-mono text-emerald-700">Rs. {(totalInc - totalCostOfGoodsSold).toLocaleString()}</span></div>
+                      </div>
+
+                      {/* Operating Expenses */}
+                      <div className="border-b pb-2">
+                        <h4 className="font-black text-sm text-slate-900 dark:text-slate-100 mb-2 uppercase">{isUrdu ? 'انتظامی اخراجات (Operating Expenses)' : 'Operating Expenses'}</h4>
+                        <div className="flex justify-between py-1"><span>{isUrdu ? 'ملازمین کی تنخواہیں (Staff Salaries)' : 'Employee Payroll Salaries'}</span><span className="font-mono text-rose-600 font-bold">Rs. {salariesExpense.toLocaleString()}</span></div>
+                        {journal
+                          .filter(j => {
+                            const acc = accounts.find(a => a.id === j.account_id || a.code === j.account_id);
+                            return acc?.type === 'Expense';
+                          })
+                          .map(j => {
+                            const acc = accounts.find(a => a.id === j.account_id || a.code === j.account_id);
+                            return (
+                              <div key={j.id} className="flex justify-between py-1 pl-3 text-muted-foreground">
+                                <span>{acc?.name} ({j.description})</span>
+                                <span className="font-mono">Rs. {Number(j.amount).toLocaleString()}</span>
+                              </div>
+                            );
+                          })}
+                        <div className="flex justify-between py-1.5 font-bold text-slate-800 dark:text-slate-200 border-t border-slate-200 mt-1"><span>{isUrdu ? 'مجموعی اخراجات:' : 'Total Operating Expenses:'}</span><span className="font-mono">Rs. {totalExp.toLocaleString()}</span></div>
+                      </div>
+
+                      {/* Net Retained Profit */}
+                      <div className={`p-4 rounded-2xl flex justify-between items-center ${netProfitYTD >= 0 ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300' : 'bg-rose-500/10 text-rose-800 dark:text-rose-300'}`}>
+                        <span className="font-black text-sm">{isUrdu ? 'خالص منافع / نقصان (YTD Net Profit):' : 'Net Retained Profit (YTD):'}</span>
+                        <span className="font-mono text-lg font-black">Rs. {netProfitYTD.toLocaleString()}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* BALANCE SHEET */}
+                  <Card className="border-border shadow-xl bg-card rounded-3xl overflow-hidden">
+                    <CardHeader className="bg-muted/50 border-b border-border p-5">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-base font-extrabold flex items-center gap-2">
+                          <span>⚖️</span>
+                          {isUrdu ? 'مالیاتی پوزیشن کا گوشوارہ (Balance Sheet)' : 'Statement of Financial Position (Balance Sheet)'}
+                        </CardTitle>
+                        <Badge variant="secondary" className="font-bold text-[10px] uppercase">As of Today</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4 text-xs font-semibold">
+                      {/* Assets Section */}
+                      <div className="border-b pb-2">
+                        <h4 className="font-black text-sm text-slate-900 dark:text-slate-100 mb-2 uppercase">{isUrdu ? 'اثاثہ جات (Assets)' : 'Assets'}</h4>
+                        {assetAccounts.map(a => {
+                          const bal = getAccountBalance(a.id, a.type);
+                          return (
+                            <div key={a.id} className="flex justify-between py-1">
+                              <span>{a.name} ({a.code})</span>
+                              <span className="font-mono text-emerald-600 font-bold">Rs. {bal.toLocaleString()}</span>
+                            </div>
+                          );
+                        })}
+                        {assetAccounts.length === 0 && (
+                          <div className="flex justify-between py-1">
+                            <span>Cash & Bank Balances (Est.)</span>
+                            <span className="font-mono text-emerald-600 font-bold">Rs. {(cashInHand + bankBalance).toLocaleString()}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between py-1.5 font-bold text-slate-900 dark:text-slate-100 border-t border-slate-200 mt-1">
+                          <span>{isUrdu ? 'مجموعی اثاثہ جات:' : 'Total Assets:'}</span>
+                          <span className="font-mono text-emerald-700 text-sm font-black">Rs. {totalAssetsVal.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Liabilities Section */}
+                      <div className="border-b pb-2">
+                        <h4 className="font-black text-sm text-slate-900 dark:text-slate-100 mb-2 uppercase">{isUrdu ? 'واجبات (Liabilities)' : 'Liabilities'}</h4>
+                        {liabAccounts.map(a => {
+                          const bal = getAccountBalance(a.id, a.type);
+                          return (
+                            <div key={a.id} className="flex justify-between py-1">
+                              <span>{a.name} ({a.code})</span>
+                              <span className="font-mono text-rose-600 font-bold">Rs. {bal.toLocaleString()}</span>
+                            </div>
+                          );
+                        })}
+                        {liabAccounts.length === 0 && (
+                          <div className="text-muted-foreground italic py-1">No Liabilities accounts recorded</div>
+                        )}
+                        <div className="flex justify-between py-1.5 font-bold text-slate-900 dark:text-slate-100 border-t border-slate-200 mt-1">
+                          <span>{isUrdu ? 'مجموعی واجبات:' : 'Total Liabilities:'}</span>
+                          <span className="font-mono text-rose-700 text-sm font-black">Rs. {totalLiabilitiesVal.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Equity Section */}
+                      <div className="border-b pb-2">
+                        <h4 className="font-black text-sm text-slate-900 dark:text-slate-100 mb-2 uppercase">{isUrdu ? 'ایکویٹی (Equity)' : 'Equity'}</h4>
+                        {equityAccounts.map(a => {
+                          const bal = getAccountBalance(a.id, a.type);
+                          return (
+                            <div key={a.id} className="flex justify-between py-1">
+                              <span>{a.name} ({a.code})</span>
+                              <span className="font-mono text-indigo-600 font-bold">Rs. {bal.toLocaleString()}</span>
+                            </div>
+                          );
+                        })}
+                        <div className="flex justify-between py-1">
+                          <span>Retained Earnings (YTD Profit)</span>
+                          <span className="font-mono text-indigo-600 font-bold">Rs. {netProfitYTD.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between py-1.5 font-bold text-slate-900 dark:text-slate-100 border-t border-slate-200 mt-1">
+                          <span>{isUrdu ? 'مجموعی سرمایہ/ایکویٹی:' : 'Total Equity:'}</span>
+                          <span className="font-mono text-indigo-700 text-sm font-black">Rs. {totalEquityVal.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Summary Banner check */}
+                      <div className="pt-2">
+                        <div className="flex justify-between py-2 font-bold text-sm bg-muted/40 px-3 rounded-xl border">
+                          <span>{isUrdu ? 'واجبات اور ایکویٹی مجموعی:' : 'Total Liabilities & Equity:'}</span>
+                          <span className="font-mono text-slate-900 dark:text-slate-100 text-base font-black">Rs. {(totalLiabilitiesVal + totalEquityVal).toLocaleString()}</span>
+                        </div>
+                        <div className="mt-3 text-center">
+                          {Math.abs(totalAssetsVal - (totalLiabilitiesVal + totalEquityVal)) < 1 ? (
+                            <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1 px-3">
+                              ✓ {isUrdu ? 'بیلنس شیٹ متوازن ہے' : 'Balance Sheet is Balanced'}
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive" className="font-bold text-xs py-1 px-3">
+                              ⚠️ {isUrdu ? 'بیلنس شیٹ غیر متوازن ہے' : `Balance Sheet out of balance by Rs. ${Math.abs(totalAssetsVal - (totalLiabilitiesVal + totalEquityVal)).toLocaleString()}`}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })()}
           </div>
         )}
 
