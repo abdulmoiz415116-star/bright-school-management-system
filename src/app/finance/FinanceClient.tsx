@@ -20,6 +20,8 @@ type Account = { id: string; code: string; name: string; type: string; };
 type Journal = { id: string; account_id: string; amount: number; type: string; description: string; entry_date: string; chart_of_accounts: { name: string; code: string; type?: string; } };
 type Payroll = { id: string; employee_id: string; month_year: string; basic_salary: number; allowances: number; deductions: number; net_salary: number; status: string; payment_date: string; employees?: { employee_code?: string; profiles?: { full_name?: string; } } };
 
+const supabase = createClient();
+
 export function FinanceClient({ 
   initialFees, studentsList, initialAccounts, initialJournal, initialPayroll, employeesList, inventoryLogs 
 }: { 
@@ -85,7 +87,11 @@ export function FinanceClient({
   const [fees, setFees] = useState<Fee[]>(initialFees);
   const [payroll, setPayroll] = useState<Payroll[]>(initialPayroll);
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
+
+  // Deduplication rate-limiting trackers
+  const [lastSubmittedFee, setLastSubmittedFee] = useState<{ studentId: string, amount: string, desc: string, timestamp: number } | null>(null);
+  const [lastSubmittedJournal, setLastSubmittedJournal] = useState<{ accountId: string, amount: string, desc: string, type: string, timestamp: number } | null>(null);
+  const [lastSubmittedPayroll, setLastSubmittedPayroll] = useState<{ employeeId: string, month: string, timestamp: number } | null>(null);
 
   const [accounts, setAccounts] = useState<Account[]>(() => {
     if (typeof window !== "undefined") {
@@ -193,7 +199,20 @@ export function FinanceClient({
     const channel = supabase.channel('finance_sync_v2')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'fees' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          setFees((prev) => prev.find(f => f.id === payload.new.id) ? prev : [payload.new as Fee, ...prev]);
+          setFees((prev) => {
+            // Find duplicate by ID or same content created within 5 seconds to replace local temp row
+            const isDuplicate = prev.find(f => 
+              f.id === payload.new.id || 
+              (f.amount === payload.new.amount && 
+               f.description === payload.new.description && 
+               f.student_id === payload.new.student_id &&
+               Math.abs(Date.now() - new Date(f.created_at).getTime()) < 5000)
+            );
+            if (isDuplicate) {
+              return prev.map(f => f.id === isDuplicate.id ? (payload.new as Fee) : f);
+            }
+            return [payload.new as Fee, ...prev];
+          });
         } else if (payload.eventType === 'UPDATE') {
           setFees((prev) => prev.map(f => f.id === payload.new.id ? payload.new as Fee : f));
         } else if (payload.eventType === 'DELETE') {
@@ -224,8 +243,23 @@ export function FinanceClient({
       .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_entries' }, (payload) => {
         if (payload.eventType === 'INSERT') {
           setJournal((prev) => {
-            if (prev.find(j => j.id === payload.new.id)) return prev;
-            const updated = [payload.new as unknown as Journal, ...prev];
+            const isDuplicate = prev.find(j => 
+              j.id === payload.new.id || 
+              (Number(j.amount) === Number(payload.new.amount) && 
+               j.description === payload.new.description && 
+               j.account_id === payload.new.account_id &&
+               Math.abs(Date.now() - new Date(j.entry_date).getTime()) < 5000)
+            );
+            if (isDuplicate) {
+              return prev.map(j => j.id === isDuplicate.id ? { ...payload.new, chart_of_accounts: j.chart_of_accounts } as unknown as Journal : j);
+            }
+            // Look up account details locally if not populated on join
+            const acc = accounts.find(a => a.id === payload.new.account_id);
+            const mapped = {
+              ...payload.new,
+              chart_of_accounts: acc ? { name: acc.name, code: acc.code, type: acc.type } : null
+            } as unknown as Journal;
+            const updated = [mapped, ...prev];
             localStorage.setItem("bs_journal_entries_v1", JSON.stringify(updated));
             return updated;
           });
@@ -245,7 +279,23 @@ export function FinanceClient({
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payroll' }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          setPayroll((prev) => prev.find(p => p.id === payload.new.id) ? prev : [payload.new as unknown as Payroll, ...prev]);
+          setPayroll((prev) => {
+            const isDuplicate = prev.find(p => 
+              p.id === payload.new.id || 
+              (p.employee_id === payload.new.employee_id && 
+               p.month_year === payload.new.month_year &&
+               Math.abs(Date.now() - new Date(p.payment_date).getTime()) < 5000)
+            );
+            if (isDuplicate) {
+              return prev.map(p => p.id === isDuplicate.id ? { ...payload.new, employees: p.employees } as unknown as Payroll : p);
+            }
+            const emp = employeesList.find(e => e.id === payload.new.employee_id);
+            const mapped = {
+              ...payload.new,
+              employees: emp ? { employee_code: emp.employee_code, profiles: { full_name: empName => empName || emp.profiles?.full_name } } : null
+            } as unknown as Payroll;
+            return [mapped, ...prev];
+          });
         } else if (payload.eventType === 'UPDATE') {
           setPayroll((prev) => prev.map(p => p.id === payload.new.id ? payload.new as unknown as Payroll : p));
         } else if (payload.eventType === 'DELETE') {
@@ -254,11 +304,25 @@ export function FinanceClient({
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [supabase]);
+  }, [accounts, employeesList]);
 
   // Handlers
   const handleAddFee = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true);
+    e.preventDefault();
+    if (loading) return;
+
+    // Deduplication check: limit same fee submission within 3 seconds
+    const now = Date.now();
+    if (lastSubmittedFee && 
+        lastSubmittedFee.studentId === studentId && 
+        lastSubmittedFee.amount === feeAmount && 
+        lastSubmittedFee.desc === feeDesc && 
+        now - lastSubmittedFee.timestamp < 3000) {
+      return;
+    }
+    setLastSubmittedFee({ studentId, amount: feeAmount, desc: feeDesc, timestamp: now });
+    setLoading(true);
+
     let sName: string | null = null, sId: number | null = null;
     if (studentId) { sId = parseInt(studentId, 10); sName = studentsList.find(s => s.id === sId)?.name; }
     
@@ -320,7 +384,21 @@ export function FinanceClient({
 
   const handleAddJournal = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
+    // Deduplication check: limit same journal entry within 3 seconds
+    const now = Date.now();
+    if (lastSubmittedJournal && 
+        lastSubmittedJournal.accountId === accountId && 
+        lastSubmittedJournal.amount === journalAmount && 
+        lastSubmittedJournal.desc === journalDesc && 
+        lastSubmittedJournal.type === journalType && 
+        now - lastSubmittedJournal.timestamp < 3000) {
+      return;
+    }
+    setLastSubmittedJournal({ accountId, amount: journalAmount, desc: journalDesc, type: journalType, timestamp: now });
     setLoading(true);
+
     const acc = accounts.find(a => a.id === accountId);
     if (!acc) { setLoading(false); return; }
 
@@ -415,7 +493,20 @@ export function FinanceClient({
   };
 
   const handleAddPayroll = async (e: React.FormEvent) => {
-    e.preventDefault(); setLoading(true);
+    e.preventDefault();
+    if (loading) return;
+
+    // Deduplication check: limit same employee payroll within 3 seconds
+    const now = Date.now();
+    if (lastSubmittedPayroll && 
+        lastSubmittedPayroll.employeeId === payEmployeeId && 
+        lastSubmittedPayroll.month === payMonth && 
+        now - lastSubmittedPayroll.timestamp < 3000) {
+      return;
+    }
+    setLastSubmittedPayroll({ employeeId: payEmployeeId, month: payMonth, timestamp: now });
+    setLoading(true);
+
     const emp = employeesList.find(e => e.id === payEmployeeId);
     const empName = emp?.profiles?.full_name || emp?.name || 'Prof. Muhammad Usman';
 
