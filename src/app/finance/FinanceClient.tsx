@@ -292,7 +292,7 @@ export function FinanceClient({
             const emp = employeesList.find(e => e.id === payload.new.employee_id);
             const mapped = {
               ...payload.new,
-              employees: emp ? { employee_code: emp.employee_code, profiles: { full_name: empName => empName || emp.profiles?.full_name } } : null
+              employees: emp ? { employee_code: emp.employee_code, profiles: { full_name: emp.name || emp.profiles?.full_name || "" } } : null
             } as unknown as Payroll;
             return [mapped, ...prev];
           });
