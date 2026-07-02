@@ -24,7 +24,11 @@ export default async function StudentsPage() {
     { id: 9910, name: 'Abdullah Haroon', admission_number: 'ADM-1010', roll_number: 'G8-20', father_name: 'Haroon Rasheed', dob: '2010-01-22', gender: 'Male', blood_group: 'A+', address: 'Valencia Town, Lahore', mobile_number: '0306-6677889', created_at: new Date().toISOString() }
   ];
 
-  const allStudents = [...(dummyStudents), ...(students || [])];
+  const dbStudents = students || [];
+  const uniqueDummyStudents = dummyStudents.filter(ds => 
+    !dbStudents.some(s => s.admission_number === ds.admission_number || s.name.toLowerCase() === ds.name.toLowerCase())
+  );
+  const allStudents = [...uniqueDummyStudents, ...dbStudents];
 
   return <StudentsClient initialStudents={allStudents as any} />;
 }

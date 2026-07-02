@@ -528,7 +528,8 @@ export function StudentsClient({ initialStudents }: { initialStudents: Student[]
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[110px] pl-4 font-bold">{t("admNumber")}</TableHead>
+                        <TableHead className="w-[60px] pl-4 font-bold">#</TableHead>
+                        <TableHead className="w-[110px] font-bold">{t("admNumber")}</TableHead>
                         <TableHead className="font-bold">{t("studentName")}</TableHead>
                         <TableHead className="font-bold">{isUrdu ? "کلاس" : "Class"}</TableHead>
                         <TableHead className="font-bold">{t("fatherName")}</TableHead>
@@ -537,11 +538,27 @@ export function StudentsClient({ initialStudents }: { initialStudents: Student[]
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {[...students].sort((a, b) => (a.admission_number || "").localeCompare(b.admission_number || "", undefined, { numeric: true, sensitivity: 'base' })).map((student) => (
-                        <TableRow key={student.id} className={`group hover:bg-muted/50 transition-colors ${editingId === student.id ? 'bg-rose-50/50 dark:bg-rose-950/30' : ''}`}>
-                          <TableCell className="font-mono font-bold text-xs text-rose-600 dark:text-rose-400 pl-4">
-                            {student.admission_number || `#${student.id}`}
-                          </TableCell>
+                      {(() => {
+                        // Deduplicate by admission number or name dynamically
+                        const seen = new Set<string>();
+                        const uniqueStudents = [...students].filter(s => {
+                          const key = (s.admission_number || s.id.toString()).toLowerCase().trim();
+                          if (seen.has(key)) return false;
+                          seen.add(key);
+                          return true;
+                        });
+                        // Sort by admission number
+                        const sortedStudents = uniqueStudents.sort((a, b) => 
+                          (a.admission_number || "").localeCompare(b.admission_number || "", undefined, { numeric: true, sensitivity: 'base' })
+                        );
+                        return sortedStudents.map((student, index) => (
+                          <TableRow key={student.id} className={`group hover:bg-muted/50 transition-colors ${editingId === student.id ? 'bg-rose-50/50 dark:bg-rose-950/30' : ''}`}>
+                            <TableCell className="pl-4 font-bold text-xs text-slate-500">
+                              {index + 1}
+                            </TableCell>
+                            <TableCell className="font-mono font-bold text-xs text-rose-600 dark:text-rose-400">
+                              {student.admission_number || `#${student.id}`}
+                            </TableCell>
                           <TableCell className="font-bold text-foreground">
                             {student.name || t("unknown")}
                             {student.blood_group && <Badge variant="outline" className="ml-2 text-[10px]">{student.blood_group}</Badge>}
@@ -605,7 +622,8 @@ export function StudentsClient({ initialStudents }: { initialStudents: Student[]
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ))
+                    })()}
                     </TableBody>
                   </Table>
                 </div>
